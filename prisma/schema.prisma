@@ -1,0 +1,83 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+model User {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  email     String    @unique
+  name      String
+  password  String
+  role      UserRole  @default(USER)
+  
+  // Optional: User's own SMTP settings for sending emails
+  smtpHost     String?
+  smtpPort     Int?
+  smtpUser     String?
+  smtpPassword String?
+  
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  meetings  Meeting[]
+}
+
+model Meeting {
+  id          String       @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  date        DateTime
+  location    String?
+  description String?
+  meetingMode String?      @default("offline")
+  meetingLink String?
+  status      String       @default("scheduled")
+  createdBy   String       @db.ObjectId
+  user        User         @relation(fields: [createdBy], references: [id])
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  agendaItems AgendaItem[]
+  minutes     Minutes?
+  reports     Report[]
+}
+
+model AgendaItem {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  meetingId   String   @db.ObjectId
+  meeting     Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  presenter   String?
+  duration    Int?
+  order       Int
+  createdAt   DateTime @default(now())
+}
+
+model Minutes {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  meetingId   String   @unique @db.ObjectId
+  meeting     Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  discussions String
+  decisions   String?
+  actionItems String?
+  attendees   String[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Report {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  meetingId   String   @db.ObjectId
+  meeting     Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  pdfUrl      String?
+  version     Int      @default(1)
+  generatedAt DateTime @default(now())
+  emailedTo   String[]
+}
