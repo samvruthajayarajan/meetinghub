@@ -1,21 +1,376 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0f172a;
-  --foreground: #f1f5f9;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --background: #f5f5f5;
+  --foreground: #2d2d2d;
+  --card-bg: #ffffff;
+  --primary: #2d2d2d;
+  --secondary: #6b7280;
+  --accent-green: #d4f4dd;
+  --accent-mint: #c7f0db;
+  --accent-peach: #fef3c7;
+  --accent-yellow: #fef3c7;
+  --text-black: #2d2d2d;
+  --text-gray: #6b7280;
+  --text-light-gray: #9ca3af;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: #f5f5f5;
+  color: #2d2d2d;
   font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+}
+
+html {
+  scroll-behavior: smooth;
+  overflow-x: hidden;
+}
+
+body {
+  overflow-x: hidden;
+  width: 100%;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f5f7f6;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+@media (max-width: 768px) {
+  button, a, input, select, textarea {
+    min-height: 44px;
+  }
+}
+
+/* Modern card styles */
+.modern-card {
+  background: var(--card-bg);
+  border-radius: 24px;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 1.5rem;
+}
+
+.modern-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+/* Project card with colored backgrounds */
+.project-card {
+  background: white;
+  border-radius: 24px;
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.3s ease;
+  min-height: 160px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+}
+
+.project-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-4px);
+}
+
+.project-card.green {
+  background: linear-gradient(135deg, #d4f4dd 0%, #e8f9ed 100%);
+}
+
+.project-card.peach {
+  background: linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%);
+}
+
+.project-card.yellow {
+  background: linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%);
+}
+
+.project-card.blue {
+  background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%);
+}
+
+.project-card.pink {
+  background: linear-gradient(135deg, #fce7f3 0%, #fdf2f8 100%);
+}
+
+.project-card.lavender {
+  background: linear-gradient(135deg, #e0e7ff 0%, #eef2ff 100%);
+}
+
+.project-card.sage {
+  background: linear-gradient(135deg, #d9e8d8 0%, #ecfdf5 100%);
+}
+
+.project-card.coral {
+  background: linear-gradient(135deg, #ffd4c4 0%, #ffe4d9 100%);
+}
+
+.project-card.sky {
+  background: linear-gradient(135deg, #bae6fd 0%, #e0f2fe 100%);
+}
+
+.project-card.mint {
+  background: linear-gradient(135deg, #c7f0db 0%, #d1fae5 100%);
+}
+
+/* Dashed add card */
+.add-card {
+  background: transparent;
+  border: 2px dashed #cbd5e1;
+  border-radius: 24px;
+  padding: 1.5rem;
+  min-height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.add-card:hover {
+  border-color: #94a3b8;
+  background: rgba(255, 255, 255, 0.6);
+  transform: scale(1.02);
+}
+
+
+
+/* Circular action button */
+.action-button {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #86efac 0%, #4ade80 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(74, 222, 128, 0.3);
+}
+
+.action-button:hover {
+  background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(74, 222, 128, 0.4);
+}
+
+/* Tag styles */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.tag-green {
+  background: var(--accent-green);
+  color: #2f855a;
+}
+
+.tag-peach {
+  background: var(--accent-peach);
+  color: #c2410c;
+}
+
+.tag-yellow {
+  background: var(--accent-yellow);
+  color: #d69e2e;
+}
+
+.tag-blue {
+  background: var(--accent-blue);
+  color: #2c5282;
+}
+
+.tag-lavender {
+  background: var(--accent-lavender);
+  color: #4f46e5;
+}
+
+.tag-sage {
+  background: var(--accent-sage);
+  color: #059669;
+}
+
+.tag-coral {
+  background: var(--accent-coral);
+  color: #dc2626;
+}
+
+.tag-sky {
+  background: var(--accent-sky);
+  color: #0284c7;
+}
+
+.tag-mint {
+  background: var(--accent-mint);
+  color: #047857;
+}
+
+/* Avatar group */
+.avatar-group {
+  display: flex;
+  align-items: center;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid white;
+  margin-left: -10px;
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #4a5568;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.avatar:first-child {
+  margin-left: 0;
+}
+
+/* Meeting card styles */
+.meeting-card {
+  background: white;
+  border-radius: 20px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.meeting-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateX(6px);
+}
+
+/* Input styles */
+input, textarea, select {
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  padding: 0.75rem 1rem;
+  transition: all 0.2s ease;
+  background: white;
+  font-size: 0.95rem;
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: #9ca3af;
+  box-shadow: 0 0 0 3px rgba(156, 163, 175, 0.1);
+}
+
+/* Progress bar */
+.progress-bar {
+  height: 4px;
+  background: #e5e7eb;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 0.5rem;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #2d2d2d;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+/* Soft button styles */
+.soft-button {
+  border-radius: 16px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  padding: 0.75rem 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.soft-button:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Date pill styles */
+.date-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-radius: 16px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  min-width: 60px;
+}
+
+.date-pill:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.date-pill.active {
+  background: #2d2d2d;
+  color: white;
+  border-color: #2d2d2d;
+}
+
+/* Schedule time block */
+.schedule-block {
+  background: #2d2d2d;
+  color: white;
+  border-radius: 16px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.schedule-block-light {
+  background: white;
+  color: #3d4043;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.schedule-block-light:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
 }

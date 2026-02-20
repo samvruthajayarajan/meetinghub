@@ -293,43 +293,43 @@ export default function MinutesPage({ params }: { params: Promise<{ id: string }
 
   if (status === 'loading' || loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-900">
+      <div className="flex items-center justify-center min-h-screen bg-white">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-          <p className="mt-4 text-slate-300">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-800 mx-auto"></div>
+          <p className="mt-4 text-gray-800">Loading...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-900">
-      <header className="bg-slate-900 border-b border-slate-700 sticky top-0 z-30">
+    <div className="min-h-screen bg-white">
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
                 onClick={() => router.push('/user')}
-                className="text-slate-400 hover:text-white transition-colors"
+                className="text-gray-600 hover:text-gray-800 transition-colors"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
               </button>
               <div>
-                <h1 className="text-2xl font-bold text-white">Meeting Minutes</h1>
-                <p className="text-sm text-slate-400">{meeting?.title}</p>
+                <h1 className="text-2xl font-bold text-gray-800">Meeting Minutes</h1>
+                <p className="text-sm text-gray-600">{meeting?.title}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <button
                 onClick={handleGenerateMinutes}
                 disabled={generating || saving}
-                className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg shadow-blue-500/30"
+                className="px-4 py-2 bg-green-100 text-green-700 hover:bg-green-200 font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm"
               >
                 {generating ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-700"></div>
                     <span>Generating...</span>
                   </>
                 ) : (
@@ -342,8 +342,8 @@ export default function MinutesPage({ params }: { params: Promise<{ id: string }
                 )}
               </button>
               {saving && (
-                <div className="flex items-center gap-2 text-blue-400">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400"></div>
+                <div className="flex items-center gap-2 text-green-700">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-700"></div>
                   <span className="text-sm">Saving...</span>
                 </div>
               )}
@@ -355,38 +355,38 @@ export default function MinutesPage({ params }: { params: Promise<{ id: string }
       <main className="max-w-5xl mx-auto px-6 py-8 space-y-6">
         {/* Saved Minutes Section */}
         {savedMinutes.length > 0 && (
-          <div className="bg-slate-900 border border-slate-700 rounded-xl p-6">
-            <h2 className="text-xl font-bold text-white mb-4">Submitted Minutes ({savedMinutes.length})</h2>
+          <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">Submitted Minutes ({savedMinutes.length})</h2>
             <div className="space-y-3">
               {savedMinutes.map((minutes) => (
-                <div key={minutes.id} className="p-4 bg-slate-900/50 border border-slate-600 rounded-lg">
+                <div key={minutes.id} className="p-4 bg-gray-50 border border-gray-200 rounded-lg shadow-sm">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
-                        <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         <div>
-                          <p className="text-white font-semibold">Minutes submitted on {new Date(minutes.submittedAt).toLocaleString()}</p>
-                          <p className="text-slate-400 text-sm">{minutes.attendees.length} attendees, {minutes.actionItems.length} action items</p>
+                          <p className="text-gray-800 font-semibold">Minutes submitted on {new Date(minutes.submittedAt).toLocaleString()}</p>
+                          <p className="text-gray-600 text-sm">{minutes.attendees.length} attendees, {minutes.actionItems.length} action items</p>
                         </div>
                       </div>
                       {viewingMinutesId === minutes.id && (
                         <div className="mt-4 space-y-4 pl-8">
                           {minutes.attendees.length > 0 && (
                             <div>
-                              <p className="text-sm font-semibold text-blue-400 mb-1">Attendees:</p>
-                              <p className="text-slate-300 text-sm">{minutes.attendees.join(', ')}</p>
+                              <p className="text-sm font-semibold text-green-700 mb-1">Attendees:</p>
+                              <p className="text-gray-700 text-sm">{minutes.attendees.join(', ')}</p>
                             </div>
                           )}
                           <div>
-                            <p className="text-sm font-semibold text-purple-400 mb-1">Discussions:</p>
-                            <p className="text-slate-300 text-sm whitespace-pre-wrap">{minutes.discussions}</p>
+                            <p className="text-sm font-semibold text-green-700 mb-1">Discussions:</p>
+                            <p className="text-gray-700 text-sm whitespace-pre-wrap">{minutes.discussions}</p>
                           </div>
                           {minutes.decisions.length > 0 && (
                             <div>
-                              <p className="text-sm font-semibold text-green-400 mb-1">Decisions:</p>
-                              <ul className="list-disc list-inside text-slate-300 text-sm space-y-1">
+                              <p className="text-sm font-semibold text-green-700 mb-1">Decisions:</p>
+                              <ul className="list-disc list-inside text-gray-700 text-sm space-y-1">
                                 {minutes.decisions.map((item, idx) => (
                                   <li key={idx}>{item}</li>
                                 ))}
@@ -395,13 +395,13 @@ export default function MinutesPage({ params }: { params: Promise<{ id: string }
                           )}
                           {minutes.actionItems.length > 0 && (
                             <div>
-                              <p className="text-sm font-semibold text-orange-400 mb-1">Action Items:</p>
+                              <p className="text-sm font-semibold text-yellow-700 mb-1">Action Items:</p>
                               <div className="space-y-2">
                                 {minutes.actionItems.map((item, idx) => (
-                                  <div key={idx} className="text-sm bg-slate-900/50 p-2 rounded">
-                                    <p className="text-white font-medium">{item.task}</p>
-                                    <p className="text-slate-400">Assigned to: {item.assignedTo}</p>
-                                    <p className="text-slate-400">Due: {new Date(item.dueDate).toLocaleDateString()}</p>
+                                  <div key={idx} className="text-sm bg-gray-50 p-2 rounded border border-gray-200">
+                                    <p className="text-gray-800 font-medium">{item.task}</p>
+                                    <p className="text-gray-600">Assigned to: {item.assignedTo}</p>
+                                    <p className="text-gray-600">Due: {new Date(item.dueDate).toLocaleDateString()}</p>
                                   </div>
                                 ))}
                               </div>
@@ -409,8 +409,8 @@ export default function MinutesPage({ params }: { params: Promise<{ id: string }
                           )}
                           {minutes.nextMeeting && (
                             <div>
-                              <p className="text-sm font-semibold text-cyan-400 mb-1">Next Meeting:</p>
-                              <p className="text-slate-300 text-sm">{new Date(minutes.nextMeeting).toLocaleString()}</p>
+                              <p className="text-sm font-semibold text-green-700 mb-1">Next Meeting:</p>
+                              <p className="text-gray-700 text-sm">{new Date(minutes.nextMeeting).toLocaleString()}</p>
                             </div>
                           )}
                         </div>
@@ -419,13 +419,13 @@ export default function MinutesPage({ params }: { params: Promise<{ id: string }
                     <div className="flex gap-2">
                       <button
                         onClick={() => setViewingMinutesId(viewingMinutesId === minutes.id ? null : minutes.id)}
-                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
+                        className="px-3 py-1.5 bg-green-100 text-green-700 hover:bg-green-200 text-sm rounded-lg transition-colors"
                       >
                         {viewingMinutesId === minutes.id ? 'Hide' : 'View'}
                       </button>
                       <button
                         onClick={() => handleDeleteSavedMinutes(minutes.id)}
-                        className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors"
+                        className="px-3 py-1.5 bg-red-100 text-red-700 hover:bg-red-200 text-sm rounded-lg transition-colors"
                       >
                         Delete
                       </button>
@@ -438,44 +438,44 @@ export default function MinutesPage({ params }: { params: Promise<{ id: string }
         )}
 
         {/* Meeting Info */}
-        <div className="bg-slate-900 border border-slate-700 rounded-xl p-6">
+        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex items-center gap-3">
-              <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
               <div>
-                <p className="text-xs text-slate-400">Date</p>
-                <p className="text-white font-medium">{meeting?.date ? new Date(meeting.date).toLocaleDateString() : 'N/A'}</p>
+                <p className="text-xs text-gray-600">Date</p>
+                <p className="text-gray-800 font-medium">{meeting?.date ? new Date(meeting.date).toLocaleDateString() : 'N/A'}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <div>
-                <p className="text-xs text-slate-400">Time</p>
-                <p className="text-white font-medium">{meeting?.date ? new Date(meeting.date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</p>
+                <p className="text-xs text-gray-600">Time</p>
+                <p className="text-gray-800 font-medium">{meeting?.date ? new Date(meeting.date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Attendees */}
-        <div className="bg-slate-900 border border-slate-700 rounded-xl p-6">
-          <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-            <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+          <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
             Attendees
           </h2>
           <div className="space-y-3 mb-4">
             {minutesData.attendees.map((attendee, index) => (
-              <div key={index} className="flex items-center justify-between p-3 bg-slate-900/50 border border-slate-600 rounded-lg">
-                <span className="text-white">{attendee}</span>
+              <div key={index} className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                <span className="text-gray-800">{attendee}</span>
                 <button
                   onClick={() => handleRemoveAttendee(index)}
-                  className="text-red-400 hover:text-red-300 transition-colors"
+                  className="text-red-600 hover:text-red-700 transition-colors"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -490,12 +490,12 @@ export default function MinutesPage({ params }: { params: Promise<{ id: string }
               value={newAttendee}
               onChange={(e) => setNewAttendee(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleAddAttendee()}
-              className="flex-1 px-4 py-2 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+              className="flex-1 px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all"
               placeholder="Add attendee name..."
             />
             <button
               onClick={handleAddAttendee}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2"
+              className="px-4 py-2 bg-green-100 text-green-700 hover:bg-green-200 rounded-lg transition-colors flex items-center gap-2"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -506,37 +506,37 @@ export default function MinutesPage({ params }: { params: Promise<{ id: string }
         </div>
 
         {/* Discussions */}
-        <div className="bg-slate-900 border border-slate-700 rounded-xl p-6">
-          <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-            <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+          <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
             </svg>
-            Discussions <span className="text-red-400">*</span>
+            Discussions <span className="text-red-600">*</span>
           </h2>
           <textarea
             value={minutesData.discussions}
             onChange={(e) => setMinutesData({ ...minutesData, discussions: e.target.value })}
             rows={6}
-            className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none"
+            className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all resize-none"
             placeholder="Enter meeting discussions and key points..."
           />
         </div>
 
         {/* Decisions */}
-        <div className="bg-slate-900 border border-slate-700 rounded-xl p-6">
-          <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-            <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+          <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             Decisions Made
           </h2>
           <div className="space-y-3 mb-4">
             {minutesData.decisions.map((decision, index) => (
-              <div key={index} className="flex items-start gap-3 p-3 bg-slate-900/50 border border-slate-600 rounded-lg">
-                <div className="flex-1 text-white">{decision}</div>
+              <div key={index} className="flex items-start gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                <div className="flex-1 text-gray-800">{decision}</div>
                 <button
                   onClick={() => handleRemoveDecision(index)}
-                  className="text-red-400 hover:text-red-300 transition-colors"
+                  className="text-red-600 hover:text-red-700 transition-colors"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -551,12 +551,12 @@ export default function MinutesPage({ params }: { params: Promise<{ id: string }
               value={newDecision}
               onChange={(e) => setNewDecision(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleAddDecision()}
-              className="flex-1 px-4 py-2 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all"
+              className="flex-1 px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all"
               placeholder="Add decision..."
             />
             <button
               onClick={handleAddDecision}
-              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center gap-2"
+              className="px-4 py-2 bg-green-100 text-green-700 hover:bg-green-200 rounded-lg transition-colors flex items-center gap-2"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -567,27 +567,27 @@ export default function MinutesPage({ params }: { params: Promise<{ id: string }
         </div>
 
         {/* Action Items */}
-        <div className="bg-slate-900 border border-slate-700 rounded-xl p-6">
-          <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-            <svg className="w-6 h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+          <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
             </svg>
             Action Items
           </h2>
           <div className="space-y-3 mb-4">
             {minutesData.actionItems.map((item, index) => (
-              <div key={item.id || index} className="p-4 bg-slate-900/50 border border-slate-600 rounded-lg">
+              <div key={item.id || index} className="p-4 bg-gray-50 border border-gray-200 rounded-lg shadow-sm">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <p className="text-white font-semibold mb-1">{item.task}</p>
-                    <div className="flex items-center gap-4 text-sm text-slate-400">
+                    <p className="text-gray-800 font-semibold mb-1">{item.task}</p>
+                    <div className="flex items-center gap-4 text-sm text-gray-600">
                       <span>👤 {item.assignedTo}</span>
                       <span>📅 {new Date(item.dueDate).toLocaleDateString()}</span>
                     </div>
                   </div>
                   <button
                     onClick={() => handleRemoveActionItem(index)}
-                    className="text-red-400 hover:text-red-300 transition-colors"
+                    className="text-red-600 hover:text-red-700 transition-colors"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -600,7 +600,7 @@ export default function MinutesPage({ params }: { params: Promise<{ id: string }
           {!showActionItemForm ? (
             <button
               onClick={() => setShowActionItemForm(true)}
-              className="w-full py-3 px-4 bg-orange-600/10 hover:bg-orange-600/20 border-2 border-dashed border-orange-500/50 hover:border-orange-500 text-orange-400 font-medium rounded-lg transition-all flex items-center justify-center gap-2"
+              className="w-full py-3 px-4 bg-yellow-50 hover:bg-yellow-100 border-2 border-dashed border-yellow-300 hover:border-yellow-500 text-yellow-700 font-medium rounded-lg transition-all flex items-center justify-center gap-2"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -608,31 +608,31 @@ export default function MinutesPage({ params }: { params: Promise<{ id: string }
               Add Action Item
             </button>
           ) : (
-            <div className="p-4 bg-slate-900/50 border border-slate-600 rounded-lg space-y-3">
+            <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-3">
               <input
                 type="text"
                 value={newActionItem.task}
                 onChange={(e) => setNewActionItem({ ...newActionItem, task: e.target.value })}
-                className="w-full px-4 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all"
+                className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-all"
                 placeholder="Task description *"
               />
               <input
                 type="text"
                 value={newActionItem.assignedTo}
                 onChange={(e) => setNewActionItem({ ...newActionItem, assignedTo: e.target.value })}
-                className="w-full px-4 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all"
+                className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-all"
                 placeholder="Assigned to *"
               />
               <input
                 type="date"
                 value={newActionItem.dueDate}
                 onChange={(e) => setNewActionItem({ ...newActionItem, dueDate: e.target.value })}
-                className="w-full px-4 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all"
+                className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-all"
               />
               <div className="flex gap-2">
                 <button
                   onClick={handleAddActionItem}
-                  className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors"
+                  className="px-4 py-2 bg-yellow-100 text-yellow-700 hover:bg-yellow-200 rounded-lg transition-colors"
                 >
                   Add Item
                 </button>
@@ -641,7 +641,7 @@ export default function MinutesPage({ params }: { params: Promise<{ id: string }
                     setShowActionItemForm(false);
                     setNewActionItem({ task: '', assignedTo: '', dueDate: '' });
                   }}
-                  className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
+                  className="px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
@@ -651,9 +651,9 @@ export default function MinutesPage({ params }: { params: Promise<{ id: string }
         </div>
 
         {/* Next Meeting */}
-        <div className="bg-slate-900 border border-slate-700 rounded-xl p-6">
-          <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-            <svg className="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+          <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
             Next Meeting
@@ -662,18 +662,18 @@ export default function MinutesPage({ params }: { params: Promise<{ id: string }
             type="datetime-local"
             value={minutesData.nextMeeting}
             onChange={(e) => setMinutesData({ ...minutesData, nextMeeting: e.target.value })}
-            className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all"
+            className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all"
           />
         </div>
 
         {/* Submit Button */}
-        <div className="bg-slate-900 border border-slate-700 rounded-xl p-6">
+        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
           <div className="space-y-4">
-            <div className="flex items-start gap-3 p-4 bg-slate-7000/10 border border-blue-500/50 rounded-lg">
-              <svg className="w-6 h-6 text-blue-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex items-start gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <svg className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <div className="text-sm text-blue-300">
+              <div className="text-sm text-green-900">
                 <p className="font-semibold mb-1">Ready to submit?</p>
                 <p>Make sure you've added discussions. After submitting, you can create new minutes.</p>
               </div>
@@ -681,7 +681,7 @@ export default function MinutesPage({ params }: { params: Promise<{ id: string }
             <button
               onClick={handleSubmitMinutes}
               disabled={saving}
-              className="w-full py-4 px-6 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white text-lg font-bold rounded-xl shadow-lg shadow-green-500/30 hover:shadow-green-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+              className="w-full py-4 px-6 bg-green-100 text-green-700 hover:bg-green-200 text-lg font-bold rounded-xl shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />

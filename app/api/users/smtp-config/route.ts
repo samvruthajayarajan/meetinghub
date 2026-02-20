@@ -18,6 +18,7 @@ export async function GET(req: NextRequest) {
         smtpHost: true,
         smtpPort: true,
         smtpUser: true,
+        gmailRefreshToken: true,
         // Don't return password for security
       }
     });
@@ -29,7 +30,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       smtpHost: user.smtpHost,
       smtpPort: user.smtpPort,
-      smtpUser: user.smtpUser
+      smtpUser: user.smtpUser,
+      gmailRefreshToken: !!user.gmailRefreshToken // Return boolean, not the actual token
     });
   } catch (error: any) {
     console.error('Error fetching SMTP config:', error);

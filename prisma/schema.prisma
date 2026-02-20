@@ -19,11 +19,16 @@ model User {
   password  String
   role      UserRole  @default(USER)
   
-  // Optional: User's own SMTP settings for sending emails
+  // Optional: User's own SMTP settings for sending emails (Legacy)
   smtpHost     String?
   smtpPort     Int?
   smtpUser     String?
   smtpPassword String?
+  
+  // Gmail OAuth tokens for sending emails via Gmail API
+  gmailAccessToken  String?
+  gmailRefreshToken String?
+  gmailTokenExpiry  DateTime?
   
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt

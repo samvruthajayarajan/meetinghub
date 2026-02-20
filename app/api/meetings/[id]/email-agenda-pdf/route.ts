@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { sendEmailViaGmail, checkGmailConnection } from '@/lib/gmailApi';
 import nodemailer from 'nodemailer';
 import puppeteer from 'puppeteer';
 import { format } from 'date-fns';
@@ -12,7 +13,7 @@ export async function POST(
 ) {
   const session = await getServerSession(authOptions);
   
-  if (!session) {
+  if (!session?.user?.email) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -40,43 +41,18 @@ export async function POST(
     return NextResponse.json({ error: 'Meeting not found' }, { status: 404 });
   }
 
-  // Determine which SMTP to use
-  let smtpConfig;
-  let fromEmail;
-  let fromName;
+  // Check if user has Gmail connected
+  const hasGmail = await checkGmailConnection(session.user.email);
 
-  if (meeting.user.smtpHost && meeting.user.smtpUser && meeting.user.smtpPassword) {
-    smtpConfig = {
-      host: meeting.user.smtpHost,
-      port: meeting.user.smtpPort || 587,
-      secure: false,
-      auth: {
-        user: meeting.user.smtpUser,
-        pass: meeting.user.smtpPassword
-      }
-    };
-    fromEmail = meeting.user.smtpUser;
-    fromName = meeting.user.name;
-  } else {
-    if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASSWORD ||
-        process.env.SMTP_USER === 'your-email@gmail.com') {
+  if (!hasGmail) {
+    // Check if user has SMTP configured as fallback
+    if (!meeting.user.smtpHost || !meeting.user.smtpUser || !meeting.user.smtpPassword) {
       return NextResponse.json({ 
-        error: 'Email service not configured.',
-        configured: false
+        error: 'Please connect your Gmail account in Profile to send emails from your account.',
+        configured: false,
+        needsGmailAuth: true
       }, { status: 400 });
     }
-    
-    smtpConfig = {
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: false,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASSWORD
-      }
-    };
-    fromEmail = process.env.SMTP_USER;
-    fromName = meeting.user.name;
   }
 
   try {
@@ -92,8 +68,6 @@ export async function POST(
     await browser.close();
 
     // Send email with PDF attachment
-    const transporter = nodemailer.createTransport(smtpConfig);
-
     const emailHtml = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; border-radius: 10px 10px 0 0;">
@@ -140,24 +114,53 @@ export async function POST(
       </div>
     `;
 
-    await transporter.sendMail({
-      from: `"${fromName}" <${fromEmail}>`,
-      replyTo: meeting.user.email,
-      to: recipients.join(', '),
-      subject: `Meeting Agenda: ${meeting.title}`,
-      html: emailHtml,
-      attachments: [
-        {
-          filename: `agenda-${meeting.title.replace(/[^a-zA-Z0-9-_]/g, '-')}.pdf`,
-          content: Buffer.from(pdfBuffer),
-          contentType: 'application/pdf'
+    const attachments = [{
+      filename: `agenda-${meeting.title.replace(/[^a-zA-Z0-9-_]/g, '-')}.pdf`,
+      content: Buffer.from(pdfBuffer),
+      contentType: 'application/pdf'
+    }];
+
+    // Try Gmail API first, fallback to SMTP
+    if (hasGmail) {
+      await sendEmailViaGmail(
+        session.user.email,
+        recipients,
+        `Meeting Agenda: ${meeting.title}`,
+        emailHtml,
+        attachments
+      );
+    } else {
+      // Fallback to SMTP
+      const smtpConfig = {
+        host: meeting.user.smtpHost!,
+        port: meeting.user.smtpPort || 587,
+        secure: false,
+        auth: {
+          user: meeting.user.smtpUser!,
+          pass: meeting.user.smtpPassword!
         }
-      ]
-    });
+      };
+
+      const transporter = nodemailer.createTransport(smtpConfig);
+
+      await transporter.sendMail({
+        from: `"${meeting.user.name}" <${meeting.user.smtpUser}>`,
+        replyTo: meeting.user.email,
+        to: recipients.join(', '),
+        subject: `Meeting Agenda: ${meeting.title}`,
+        html: emailHtml,
+        attachments: attachments.map(att => ({
+          filename: att.filename,
+          content: att.content,
+          contentType: att.contentType
+        }))
+      });
+    }
 
     return NextResponse.json({ 
-      message: 'Agenda PDF sent successfully',
-      configured: true
+      message: 'Agenda PDF sent successfully from your Gmail account',
+      configured: true,
+      method: hasGmail ? 'gmail' : 'smtp'
     });
   } catch (error: any) {
     console.error('Email error:', error);
