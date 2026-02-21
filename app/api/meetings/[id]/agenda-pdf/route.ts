@@ -70,7 +70,7 @@ export async function GET(
       // Don't fail the PDF generation if report saving fails
     }
 
-    return new NextResponse(pdf, {
+    return new NextResponse(Buffer.from(pdf), {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="agenda-${meeting.title.replace(/[^a-zA-Z0-9-_]/g, '-')}.pdf"`
