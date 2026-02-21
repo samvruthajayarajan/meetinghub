@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import puppeteer from 'puppeteer';
+import { getBrowser } from '@/lib/puppeteerConfig';
 import { format } from 'date-fns';
 
 export async function GET(
@@ -38,7 +38,7 @@ export async function GET(
     const html = generateAgendaHTML(meeting);
 
     console.log('Launching puppeteer...');
-    const browser = await puppeteer.launch({ headless: true });
+    const browser = await getBrowser();
     const page = await browser.newPage();
     await page.setContent(html);
     const pdf = await page.pdf({ format: 'A4', printBackground: true });

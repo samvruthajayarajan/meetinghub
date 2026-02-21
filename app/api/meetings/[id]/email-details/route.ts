@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { sendEmailViaGmail, checkGmailConnection } from '@/lib/gmailApi';
 import nodemailer from 'nodemailer';
-import puppeteer from 'puppeteer';
+import { getBrowser } from '@/lib/puppeteerConfig';
 import { format } from 'date-fns';
 
 export async function POST(
@@ -72,7 +72,7 @@ export async function POST(
     }
 
     // Generate Agenda PDF
-    const browser = await puppeteer.launch({ 
+    const browser = await getBrowser(); 
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
