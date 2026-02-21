@@ -15,7 +15,7 @@ export async function getBrowser() {
         height: 720,
       },
       executablePath,
-      headless: chromium.headless,
+      headless: true,
     });
   } else {
     // Local development
