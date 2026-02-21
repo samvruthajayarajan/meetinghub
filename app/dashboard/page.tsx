@@ -14,6 +14,21 @@ export default function Dashboard() {
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
 
+  const fetchMeetings = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/meetings');
+      if (response.ok) {
+        const data = await response.json();
+        setMeetings(data);
+      }
+    } catch (error) {
+      console.error('Error fetching meetings:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
