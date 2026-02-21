@@ -72,10 +72,7 @@ export async function POST(
 
   try {
     // Generate PDFs
-    const browser = await getBrowser(); 
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
+    const browser = await getBrowser();
     
     // Generate Meeting Report PDF
     const reportPage = await browser.newPage();

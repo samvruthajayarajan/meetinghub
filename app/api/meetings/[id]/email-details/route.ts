@@ -72,10 +72,7 @@ export async function POST(
     }
 
     // Generate Agenda PDF
-    const browser = await getBrowser(); 
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
+    const browser = await getBrowser();
     const agendaPage = await browser.newPage();
     const agendaHtml = generateAgendaPDF(meeting, agendaData);
     await agendaPage.setContent(agendaHtml);

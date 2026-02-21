@@ -58,10 +58,7 @@ export async function POST(
   try {
     // Generate PDF
     const html = generateAgendaHTML(meeting);
-    const browser = await getBrowser(); 
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
+    const browser = await getBrowser();
     const page = await browser.newPage();
     await page.setContent(html);
     const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
