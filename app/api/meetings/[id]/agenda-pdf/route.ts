@@ -33,8 +33,6 @@ export async function GET(
     }
 
     console.log('Meeting found, generating HTML...');
-    console.log('Meeting has agendaData:', !!meeting.agendaData);
-    console.log('Meeting has description:', !!meeting.description);
 
     const html = generateAgendaHTML(meeting);
 
