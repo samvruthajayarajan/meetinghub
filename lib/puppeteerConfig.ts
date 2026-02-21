@@ -1,4 +1,4 @@
-import chromium from '@sparticuz/chromium';
+import chromium from 'chrome-aws-lambda';
 import puppeteer from 'puppeteer-core';
 
 export async function getBrowser() {
@@ -6,16 +6,11 @@ export async function getBrowser() {
 
   if (isProduction) {
     // Vercel/Production environment
-    const executablePath = await chromium.executablePath();
-    
     return puppeteer.launch({
       args: chromium.args,
-      defaultViewport: {
-        width: 1280,
-        height: 720,
-      },
-      executablePath,
-      headless: true,
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath,
+      headless: chromium.headless,
     });
   } else {
     // Local development
