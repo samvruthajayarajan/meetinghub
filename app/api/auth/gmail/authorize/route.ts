@@ -26,9 +26,10 @@ export async function GET(req: NextRequest) {
       prompt: 'consent' // Force consent screen to get refresh token
     });
 
-    return NextResponse.json({ authUrl });
+    // Redirect to Google's authorization page instead of returning JSON
+    return NextResponse.redirect(authUrl);
   } catch (error: any) {
     console.error('Error generating auth URL:', error);
-    return NextResponse.json({ error: 'Failed to generate authorization URL' }, { status: 500 });
+    return NextResponse.redirect(new URL('/user?error=auth_failed', req.url));
   }
 }
