@@ -33,6 +33,7 @@ export async function GET(
     }
 
     console.log('Meeting found, generating HTML...');
+    console.log('Using Buffer.from for PDF conversion');
 
     const html = generateAgendaHTML(meeting);
 
