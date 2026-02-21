@@ -50,7 +50,7 @@ export async function GET(
 
     console.log('Report created:', report);
 
-    return new NextResponse(pdf, {
+    return new NextResponse(Buffer.from(pdf), {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="meeting-${meeting.title.replace(/[^a-zA-Z0-9-_]/g, '-')}.pdf"`
