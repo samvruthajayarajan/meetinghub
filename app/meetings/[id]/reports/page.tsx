@@ -18,6 +18,16 @@ export default function ReportsPage({ params }: { params: Promise<{ id: string }
   const [whatsappNumber, setWhatsappNumber] = useState('');
   const [pdfUrl, setPdfUrl] = useState('');
   const [expandedReportId, setExpandedReportId] = useState<string | null>(null);
+  const [showReportForm, setShowReportForm] = useState(false);
+  
+  // Report form fields
+  const [executiveSummary, setExecutiveSummary] = useState('');
+  const [objectives, setObjectives] = useState('');
+  const [keyDiscussionPoints, setKeyDiscussionPoints] = useState<Array<{topic: string, description: string}>>([]);
+  const [decisionsTaken, setDecisionsTaken] = useState<string[]>([]);
+  const [actionItems, setActionItems] = useState<Array<{task: string, assignedTo: string, dueDate: string}>>([]);
+  const [risksIdentified, setRisksIdentified] = useState<string[]>([]);
+  const [conclusion, setConclusion] = useState('');
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -41,6 +51,36 @@ export default function ReportsPage({ params }: { params: Promise<{ id: string }
       console.log('Meeting data fetched:', data);
       console.log('Reports count:', data.reports?.length || 0);
       setMeeting(data);
+      
+      // Pre-populate form with existing data
+      if (data.description) {
+        try {
+          const parsed = JSON.parse(data.description);
+          if (parsed.savedAgendas && parsed.savedAgendas.length > 0) {
+            const agenda = parsed.savedAgendas[parsed.savedAgendas.length - 1];
+            if (agenda.objectives) setObjectives(agenda.objectives);
+            if (agenda.agendaItems) setKeyDiscussionPoints(agenda.agendaItems);
+            if (agenda.preparationRequired) setRisksIdentified(agenda.preparationRequired);
+          }
+        } catch (e) {
+          // Not JSON
+        }
+      }
+      
+      if (data.minutes?.discussions) {
+        try {
+          const parsed = JSON.parse(data.minutes.discussions);
+          if (parsed.savedMinutes && parsed.savedMinutes.length > 0) {
+            const minutes = parsed.savedMinutes[parsed.savedMinutes.length - 1];
+            if (minutes.discussions) setExecutiveSummary(minutes.discussions);
+            if (minutes.decisions) setDecisionsTaken(minutes.decisions);
+            if (minutes.actionItems) setActionItems(minutes.actionItems);
+          }
+        } catch (e) {
+          // Not JSON
+        }
+      }
+      
       setLoading(false);
     } catch (error: any) {
       console.error('Error fetching meeting:', error);
@@ -52,32 +92,76 @@ export default function ReportsPage({ params }: { params: Promise<{ id: string }
   const handleGeneratePDF = async () => {
     setGenerating(true);
     try {
-      const response = await fetch(`/api/meetings/${resolvedParams.id}/pdf`);
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('PDF generation failed:', errorText);
-        throw new Error('Failed to generate PDF');
+      // If form is shown, use custom report endpoint with form data
+      if (showReportForm) {
+        const response = await fetch(`/api/meetings/${resolvedParams.id}/custom-report`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            executiveSummary,
+            objectives,
+            keyDiscussionPoints,
+            decisionsTaken,
+            actionItems,
+            risksIdentified,
+            conclusion
+          })
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('PDF generation failed:', errorText);
+          throw new Error('Failed to generate PDF');
+        }
+        
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        
+        // Auto download
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `meeting-report-${meeting?.title.replace(/[^a-zA-Z0-9-_]/g, '-')}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        // Wait a moment for database transaction to complete
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Refresh meeting data to show the new report in history
+        await fetchMeeting();
+        
+        alert('PDF generated and saved successfully!');
+        setShowReportForm(false);
+      } else {
+        // Use default endpoint with existing data
+        const response = await fetch(`/api/meetings/${resolvedParams.id}/pdf`);
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('PDF generation failed:', errorText);
+          throw new Error('Failed to generate PDF');
+        }
+        
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        setPdfUrl(url);
+        
+        // Auto download
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `meeting-report-${meeting?.title.replace(/[^a-zA-Z0-9-_]/g, '-')}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        // Wait a moment for database transaction to complete
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Refresh meeting data to show the new report in history
+        await fetchMeeting();
+        
+        alert('PDF generated and saved successfully!');
       }
-      
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      setPdfUrl(url);
-      
-      // Auto download
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `meeting-report-${meeting?.title.replace(/[^a-zA-Z0-9-_]/g, '-')}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      
-      // Wait a moment for database transaction to complete
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Refresh meeting data to show the new report in history
-      await fetchMeeting();
-      
-      alert('PDF generated and saved successfully!');
     } catch (error) {
       console.error('Error generating PDF:', error);
       alert('Failed to generate PDF. Please try again.');
@@ -86,38 +170,113 @@ export default function ReportsPage({ params }: { params: Promise<{ id: string }
     }
   };
 
+  // Helper functions for managing arrays
+  const addDiscussionPoint = () => {
+    setKeyDiscussionPoints([...keyDiscussionPoints, { topic: '', description: '' }]);
+  };
+
+  const updateDiscussionPoint = (index: number, field: 'topic' | 'description', value: string) => {
+    const updated = [...keyDiscussionPoints];
+    updated[index][field] = value;
+    setKeyDiscussionPoints(updated);
+  };
+
+  const removeDiscussionPoint = (index: number) => {
+    setKeyDiscussionPoints(keyDiscussionPoints.filter((_, i) => i !== index));
+  };
+
+  const addDecision = () => {
+    setDecisionsTaken([...decisionsTaken, '']);
+  };
+
+  const updateDecision = (index: number, value: string) => {
+    const updated = [...decisionsTaken];
+    updated[index] = value;
+    setDecisionsTaken(updated);
+  };
+
+  const removeDecision = (index: number) => {
+    setDecisionsTaken(decisionsTaken.filter((_, i) => i !== index));
+  };
+
+  const addActionItem = () => {
+    setActionItems([...actionItems, { task: '', assignedTo: '', dueDate: '' }]);
+  };
+
+  const updateActionItem = (index: number, field: 'task' | 'assignedTo' | 'dueDate', value: string) => {
+    const updated = [...actionItems];
+    updated[index][field] = value;
+    setActionItems(updated);
+  };
+
+  const removeActionItem = (index: number) => {
+    setActionItems(actionItems.filter((_, i) => i !== index));
+  };
+
+  const addRisk = () => {
+    setRisksIdentified([...risksIdentified, '']);
+  };
+
+  const updateRisk = (index: number, value: string) => {
+    const updated = [...risksIdentified];
+    updated[index] = value;
+    setRisksIdentified(updated);
+  };
+
+  const removeRisk = (index: number) => {
+    setRisksIdentified(risksIdentified.filter((_, i) => i !== index));
+  };
+
   const handleSendEmail = async () => {
-    // Use Gmail compose URL to open in new tab
-    const subject = `Meeting Report: ${meeting.title}`;
-    let body = `Meeting Report\n\n`;
-    body += `Title: ${meeting.title}\n`;
-    body += `Date: ${new Date(meeting.date).toLocaleDateString()}\n`;
-    body += `Time: ${meeting.time}\n`;
-    body += `Location: ${meeting.location || 'TBD'}\n\n`;
-    
-    // Extract actual description from JSON if present
-    if (meeting.description) {
-      try {
-        const parsed = JSON.parse(meeting.description);
-        const actualDescription = parsed.originalDescription || '';
-        if (actualDescription) {
-          body += `Description:\n${actualDescription}\n\n`;
-        }
-      } catch (e) {
-        // Not JSON, use as-is
-        body += `Description:\n${meeting.description}\n\n`;
-      }
+    if (!emailRecipients.trim()) {
+      alert('Please enter at least one email address');
+      return;
     }
-    
-    body += `---\nSent from Meeting Hub`;
-    
-    // Use logged-in user's email as sender
-    const userEmail = session?.user?.email || '';
-    const gmailUrl = `https://mail.google.com/mail/?view=cm&authuser=${encodeURIComponent(userEmail)}&to=${encodeURIComponent(emailRecipients)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.open(gmailUrl, '_blank');
-    
-    setShowEmailModal(false);
-    setEmailRecipients('');
+
+    setSending(true);
+    try {
+      // Prepare report data from current form state
+      const reportDataToSend = {
+        executiveSummary,
+        objectives,
+        keyDiscussionPoints,
+        decisionsTaken,
+        actionItems,
+        risksIdentified,
+        conclusion
+      };
+
+      const recipientList = emailRecipients.split(',').map(email => email.trim()).filter(email => email);
+      
+      const response = await fetch(`/api/meetings/${resolvedParams.id}/email-report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          recipients: recipientList,
+          reportData: reportDataToSend
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (data.needsGmailAuth) {
+          alert(data.error + '\n\nRedirecting to Profile page...');
+          router.push('/user');
+          return;
+        }
+        throw new Error(data.error || 'Failed to send email');
+      }
+      
+      alert(`Report sent successfully from your ${data.method === 'gmail' ? 'Gmail' : 'email'} account!`);
+      setShowEmailModal(false);
+      setEmailRecipients('');
+    } catch (error: any) {
+      console.error('Error sending email:', error);
+      alert(`Failed to send email: ${error.message}`);
+    } finally {
+      setSending(false);
+    }
   };
 
   const handleSendWhatsApp = async () => {
@@ -220,37 +379,269 @@ export default function ReportsPage({ params }: { params: Promise<{ id: string }
         </div>
 
         {/* Generate Report Section */}
-        <div className="bg-green-50 border border-green-200 rounded-xl p-8 shadow-sm">
-          <div className="text-center mb-6">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            </div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Generate Meeting Report</h2>
-            <p className="text-gray-700">Create a comprehensive PDF report with agenda and minutes</p>
-          </div>
-
-          <button
-            onClick={handleGeneratePDF}
-            disabled={generating}
-            className="w-full py-4 px-6 bg-green-100 text-green-700 hover:bg-green-200 text-lg font-bold rounded-xl shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
-          >
-            {generating ? (
-              <>
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-700"></div>
-                <span>Generating PDF...</span>
-              </>
-            ) : (
-              <>
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        {!showReportForm ? (
+          <div className="bg-green-50 border border-green-200 rounded-xl p-8 shadow-sm">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                <span>Generate PDF Report</span>
-              </>
-            )}
-          </button>
-        </div>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">Generate Meeting Report</h2>
+              <p className="text-gray-700">Create a comprehensive PDF report with structured sections</p>
+            </div>
+
+            <button
+              onClick={() => setShowReportForm(true)}
+              className="w-full py-4 px-6 bg-green-600 hover:bg-green-700 text-white text-lg font-bold rounded-xl shadow-sm hover:shadow-md transition-all"
+            >
+              Create Report
+            </button>
+          </div>
+        ) : (
+          <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-800">Create Custom Report</h2>
+              <button
+                onClick={() => setShowReportForm(false)}
+                className="text-gray-600 hover:text-gray-800"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              {/* Executive Summary */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-800 mb-2">
+                  1. Executive Summary
+                </label>
+                <textarea
+                  value={executiveSummary}
+                  onChange={(e) => setExecutiveSummary(e.target.value)}
+                  rows={4}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="Brief overview of the meeting..."
+                />
+              </div>
+
+              {/* Objectives */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-800 mb-2">
+                  2. Meeting Objectives
+                </label>
+                <textarea
+                  value={objectives}
+                  onChange={(e) => setObjectives(e.target.value)}
+                  rows={3}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="What were the goals of this meeting..."
+                />
+              </div>
+
+              {/* Key Discussion Points */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-800 mb-2">
+                  3. Key Discussion Points
+                </label>
+                {keyDiscussionPoints.map((point, index) => (
+                  <div key={index} className="mb-3 p-4 border border-gray-200 rounded-lg">
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="text-sm font-medium text-gray-700">Point {index + 1}</span>
+                      <button
+                        onClick={() => removeDiscussionPoint(index)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      value={point.topic}
+                      onChange={(e) => updateDiscussionPoint(index, 'topic', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-2 focus:ring-2 focus:ring-green-500"
+                      placeholder="Topic"
+                    />
+                    <textarea
+                      value={point.description}
+                      onChange={(e) => updateDiscussionPoint(index, 'description', e.target.value)}
+                      rows={2}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                      placeholder="Description"
+                    />
+                  </div>
+                ))}
+                <button
+                  onClick={addDiscussionPoint}
+                  className="w-full py-2 px-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-green-500 hover:text-green-600 transition-colors"
+                >
+                  + Add Discussion Point
+                </button>
+              </div>
+
+              {/* Decisions Taken */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-800 mb-2">
+                  4. Decisions Taken
+                </label>
+                {decisionsTaken.map((decision, index) => (
+                  <div key={index} className="mb-2 flex gap-2">
+                    <input
+                      type="text"
+                      value={decision}
+                      onChange={(e) => updateDecision(index, e.target.value)}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                      placeholder={`Decision ${index + 1}`}
+                    />
+                    <button
+                      onClick={() => removeDecision(index)}
+                      className="px-3 text-red-600 hover:text-red-700"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+                <button
+                  onClick={addDecision}
+                  className="w-full py-2 px-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-green-500 hover:text-green-600 transition-colors"
+                >
+                  + Add Decision
+                </button>
+              </div>
+
+              {/* Action Items */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-800 mb-2">
+                  5. Action Items
+                </label>
+                {actionItems.map((item, index) => (
+                  <div key={index} className="mb-3 p-4 border border-gray-200 rounded-lg">
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="text-sm font-medium text-gray-700">Action {index + 1}</span>
+                      <button
+                        onClick={() => removeActionItem(index)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      value={item.task}
+                      onChange={(e) => updateActionItem(index, 'task', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-2 focus:ring-2 focus:ring-green-500"
+                      placeholder="Task description"
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        value={item.assignedTo}
+                        onChange={(e) => updateActionItem(index, 'assignedTo', e.target.value)}
+                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                        placeholder="Assigned to"
+                      />
+                      <input
+                        type="date"
+                        value={item.dueDate}
+                        onChange={(e) => updateActionItem(index, 'dueDate', e.target.value)}
+                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                      />
+                    </div>
+                  </div>
+                ))}
+                <button
+                  onClick={addActionItem}
+                  className="w-full py-2 px-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-green-500 hover:text-green-600 transition-colors"
+                >
+                  + Add Action Item
+                </button>
+              </div>
+
+              {/* Risks Identified */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-800 mb-2">
+                  6. Risks Identified
+                </label>
+                {risksIdentified.map((risk, index) => (
+                  <div key={index} className="mb-2 flex gap-2">
+                    <input
+                      type="text"
+                      value={risk}
+                      onChange={(e) => updateRisk(index, e.target.value)}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                      placeholder={`Risk ${index + 1}`}
+                    />
+                    <button
+                      onClick={() => removeRisk(index)}
+                      className="px-3 text-red-600 hover:text-red-700"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+                <button
+                  onClick={addRisk}
+                  className="w-full py-2 px-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-green-500 hover:text-green-600 transition-colors"
+                >
+                  + Add Risk
+                </button>
+              </div>
+
+              {/* Conclusion */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-800 mb-2">
+                  7. Conclusion
+                </label>
+                <textarea
+                  value={conclusion}
+                  onChange={(e) => setConclusion(e.target.value)}
+                  rows={3}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="Summary and next steps..."
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-4 pt-4 border-t border-gray-200">
+                <button
+                  onClick={() => setShowReportForm(false)}
+                  className="flex-1 py-3 px-6 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleGeneratePDF}
+                  disabled={generating}
+                  className="flex-1 py-3 px-6 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {generating ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      <span>Generating PDF...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <span>Generate Report</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Share Report Section */}
         <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
@@ -297,24 +688,6 @@ export default function ReportsPage({ params }: { params: Promise<{ id: string }
                 </div>
               </div>
             </button>
-          </div>
-        </div>
-
-        {/* Info Card */}
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <div className="flex gap-3">
-            <svg className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <div className="text-sm text-green-900">
-              <p className="font-semibold mb-1">Report Information:</p>
-              <ul className="list-disc list-inside space-y-1 text-green-800">
-                <li>PDF includes meeting details, agenda, and minutes</li>
-                <li>Email opens your default email client with pre-filled content</li>
-                <li>WhatsApp opens web.whatsapp.com with pre-filled message</li>
-                <li>No configuration needed - works instantly!</li>
-              </ul>
-            </div>
           </div>
         </div>
 
@@ -366,18 +739,18 @@ export default function ReportsPage({ params }: { params: Promise<{ id: string }
                     key={report.id}
                     className="bg-white rounded-lg border border-gray-200 hover:border-green-300 transition-all shadow-sm"
                   >
-                    <div className="p-4">
-                      <div className="flex items-center justify-between">
+                    <div className="p-3 sm:p-4">
+                      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
                         <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
                               <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                               </svg>
                             </div>
                             <div>
-                              <h3 className="text-black font-semibold">Report Version {report.version}</h3>
-                              <p className="text-sm text-gray-600">
+                              <h3 className="text-black font-semibold text-sm sm:text-base">Report Version {report.version}</h3>
+                              <p className="text-xs sm:text-sm text-gray-600">
                                 Generated on {new Date(report.generatedAt).toLocaleString('en-US', {
                                   year: 'numeric',
                                   month: 'long',
@@ -389,15 +762,16 @@ export default function ReportsPage({ params }: { params: Promise<{ id: string }
                             </div>
                           </div>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="grid grid-cols-2 sm:flex sm:flex-wrap lg:flex-nowrap gap-2">
                           <button
                             onClick={() => setExpandedReportId(isExpanded ? null : report.id)}
-                            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+                            className="px-3 sm:px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-xs sm:text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2 col-span-2 sm:col-span-1"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isExpanded ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"} />
                             </svg>
-                            {isExpanded ? 'Hide' : 'View'} Report
+                            <span className="hidden sm:inline">{isExpanded ? 'Hide' : 'View'} Report</span>
+                            <span className="sm:hidden">{isExpanded ? 'Hide' : 'View'}</span>
                           </button>
                           <button
                             onClick={async () => {
@@ -419,12 +793,13 @@ export default function ReportsPage({ params }: { params: Promise<{ id: string }
                                 alert('Failed to download PDF');
                               }
                             }}
-                            className="px-4 py-2 bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+                            className="px-3 sm:px-4 py-2 bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white text-xs sm:text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
-                            Download PDF
+                            <span className="hidden sm:inline">Download PDF</span>
+                            <span className="sm:hidden">PDF</span>
                           </button>
                           <button
                             onClick={async () => {
@@ -446,12 +821,13 @@ export default function ReportsPage({ params }: { params: Promise<{ id: string }
                                 alert('Failed to download agenda PDF');
                               }
                             }}
-                            className="px-4 py-2 bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+                            className="px-3 sm:px-4 py-2 bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white text-xs sm:text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
-                            Agenda PDF
+                            <span className="hidden sm:inline">Agenda PDF</span>
+                            <span className="sm:hidden">Agenda</span>
                           </button>
                           <button
                             onClick={async () => {
@@ -472,12 +848,13 @@ export default function ReportsPage({ params }: { params: Promise<{ id: string }
                                 alert('Failed to delete report');
                               }
                             }}
-                            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+                            className="px-3 sm:px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
-                            Delete
+                            <span className="hidden sm:inline">Delete</span>
+                            <span className="sm:hidden">Del</span>
                           </button>
                         </div>
                       </div>
@@ -648,25 +1025,6 @@ export default function ReportsPage({ params }: { params: Promise<{ id: string }
           </div>
         )}
 
-        {/* Email Setup Guide */}
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <div className="flex gap-3">
-            <svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-            <div className="text-sm text-yellow-900">
-              <p className="font-semibold mb-1">Email Setup Required:</p>
-              <p className="text-yellow-800">To enable email sending, update these values in my-app/.env:</p>
-              <pre className="mt-2 p-2 bg-white rounded text-xs text-gray-800 overflow-x-auto border border-yellow-200">
-SMTP_HOST="smtp.gmail.com"
-SMTP_PORT="587"
-SMTP_USER="your-email@gmail.com"
-SMTP_PASSWORD="your-app-password"
-              </pre>
-              <p className="mt-2 text-yellow-800 text-xs">Then restart the server with: npm run dev</p>
-            </div>
-          </div>
-        </div>
       </main>
 
       {/* Email Modal */}
@@ -674,19 +1032,6 @@ SMTP_PASSWORD="your-app-password"
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white border border-gray-200 rounded-xl p-6 max-w-md w-full shadow-xl">
             <h3 className="text-xl font-bold text-black mb-4">Send Report via Email</h3>
-            
-            {/* Warning about Gmail account */}
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
-              <div className="flex gap-2">
-                <svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                <div className="text-xs text-yellow-800">
-                  <p className="font-semibold mb-1">Your registered email: {session?.user?.email}</p>
-                  <p>Make sure you're logged into this Gmail account in your browser, or use "Default Email App" option below.</p>
-                </div>
-              </div>
-            </div>
             
             <p className="text-gray-600 text-sm mb-4">Enter email addresses separated by commas</p>
             <textarea
@@ -696,71 +1041,34 @@ SMTP_PASSWORD="your-app-password"
               className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all resize-none mb-4"
               placeholder="recipient@example.com, another@example.com"
             />
-            <div className="flex flex-col gap-3">
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowEmailModal(false);
+                  setEmailRecipients('');
+                }}
+                className="flex-1 px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white font-semibold rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
               <button
                 onClick={handleSendEmail}
                 disabled={sending}
-                className="w-full px-4 py-2 bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                {sending ? 'Opening...' : (
+                {sending ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    <span>Sending...</span>
+                  </>
+                ) : (
                   <>
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
-                    Open in Gmail
+                    Send Report
                   </>
                 )}
-              </button>
-              
-              <button
-                onClick={() => {
-                  const subject = `Meeting Report: ${meeting.title}`;
-                  let body = `Meeting Report\n\n`;
-                  body += `Title: ${meeting.title}\n`;
-                  body += `Date: ${new Date(meeting.date).toLocaleDateString()}\n`;
-                  body += `Time: ${meeting.time}\n`;
-                  body += `Location: ${meeting.location || 'TBD'}\n\n`;
-                  
-                  // Extract actual description from JSON if present
-                  if (meeting.description) {
-                    try {
-                      const parsed = JSON.parse(meeting.description);
-                      const actualDescription = parsed.originalDescription || '';
-                      if (actualDescription) {
-                        body += `Description:\n${actualDescription}\n\n`;
-                      }
-                    } catch (e) {
-                      // Not JSON, use as-is
-                      body += `Description:\n${meeting.description}\n\n`;
-                    }
-                  }
-                  
-                  body += `---\nSent from Meeting Hub`;
-                  
-                  // Use mailto for default email client
-                  const mailtoUrl = `mailto:${encodeURIComponent(emailRecipients)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-                  window.location.href = mailtoUrl;
-                  
-                  setShowEmailModal(false);
-                  setEmailRecipients('');
-                }}
-                disabled={sending}
-                className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-800 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                Open in Default Email App
-              </button>
-              
-              <button
-                onClick={() => {
-                  setShowEmailModal(false);
-                  setEmailRecipients('');
-                }}
-                className="w-full px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white font-semibold rounded-lg transition-colors"
-              >
-                Cancel
               </button>
             </div>
           </div>
@@ -772,6 +1080,14 @@ SMTP_PASSWORD="your-app-password"
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white border border-gray-200 rounded-xl p-6 max-w-md w-full shadow-xl">
             <h3 className="text-xl font-bold text-black mb-4">Send Report via WhatsApp</h3>
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+              <p className="text-sm text-green-800 flex items-center gap-2">
+                <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span>A PDF report will be generated and included in the WhatsApp message with a download link.</span>
+              </p>
+            </div>
             <p className="text-gray-600 text-sm mb-4">Enter WhatsApp numbers (one per line, with country code)</p>
             <textarea
               value={whatsappNumber}
@@ -802,13 +1118,27 @@ SMTP_PASSWORD="your-app-password"
                       return;
                     }
 
-                    const response = await fetch(`/api/meetings/${resolvedParams.id}/whatsapp`, {
+                    // Prepare report data from current form state
+                    const reportDataToSend = {
+                      executiveSummary,
+                      objectives,
+                      keyDiscussionPoints,
+                      decisionsTaken,
+                      actionItems,
+                      risksIdentified,
+                      conclusion
+                    };
+
+                    const response = await fetch(`/api/meetings/${resolvedParams.id}/whatsapp-report`, {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ phoneNumbers }),
+                      body: JSON.stringify({ 
+                        phoneNumbers,
+                        reportData: reportDataToSend
+                      }),
                     });
 
-                    if (!response.ok) throw new Error('Failed to generate WhatsApp messages');
+                    if (!response.ok) throw new Error('Failed to generate WhatsApp messages with PDF');
                     
                     const data = await response.json();
                     
@@ -818,18 +1148,18 @@ SMTP_PASSWORD="your-app-password"
                     setSending(false);
                     
                     // Show all WhatsApp links in a copyable format
-                    const linksList = data.urls.map((item: any, index: number) => 
+                    const linksList = data.links.map((item: any, index: number) => 
                       `${index + 1}. ${item.phoneNumber}\n   ${item.url}`
                     ).join('\n\n');
                     
-                    const message = `PDFs generated successfully!\n\nWhatsApp links for ${data.urls.length} recipient(s):\n\n${linksList}\n\nCopy each link and paste in your browser, or click OK to open the first one now.`;
+                    const message = `Report PDF generated and links created!\n\nPDF URL: ${data.pdfUrl}\n\nWhatsApp links for ${data.links.length} recipient(s):\n\n${linksList}\n\nThe PDF link will expire in 24 hours.\n\nCopy each link and paste in your browser, or click OK to open the first one now.`;
                     
                     // Copy links to clipboard
-                    navigator.clipboard.writeText(data.urls.map((item: any) => item.url).join('\n\n')).catch(() => {});
+                    navigator.clipboard.writeText(data.links.map((item: any) => item.url).join('\n\n')).catch(() => {});
                     
                     if (confirm(message)) {
                       // Open first recipient
-                      window.location.href = data.urls[0].url;
+                      window.location.href = data.links[0].url;
                     }
                     
                   } catch (error: any) {

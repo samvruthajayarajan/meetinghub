@@ -21,19 +21,19 @@ export default function SignIn() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-sky-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-white flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-sky-400 to-blue-500 rounded-2xl mb-6 shadow-lg">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-gray-700 to-gray-800 rounded-2xl mb-6 shadow-lg">
             <svg className="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
           </div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Welcome Back</h1>
-          <p className="text-gray-700">Sign in to continue your journey</p>
+          <h1 className="text-4xl font-bold text-gray-800 mb-2">Welcome Back</h1>
+          <p className="text-gray-600">Sign in to continue your journey</p>
         </div>
 
-        <div className="bg-white rounded-3xl p-8 shadow-xl border border-gray-100">
+        <div className="bg-white rounded-3xl p-8 shadow-xl border border-gray-200">
           <form onSubmit={handleSubmit} className="space-y-5">
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl text-sm">
@@ -48,7 +48,7 @@ export default function SignIn() {
                 required 
                 value={formData.email} 
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })} 
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent text-gray-900 placeholder-gray-400" 
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900 placeholder-gray-400" 
                 placeholder="Enter your email" 
               />
             </div>
@@ -61,7 +61,7 @@ export default function SignIn() {
                   required 
                   value={formData.password} 
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })} 
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent text-gray-900 placeholder-gray-400 pr-12" 
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900 placeholder-gray-400 pr-12" 
                   placeholder="Enter your password" 
                 />
                 <button
@@ -86,16 +86,26 @@ export default function SignIn() {
             <button 
               type="submit" 
               disabled={loading} 
-              className="w-full bg-gradient-to-r from-sky-400 to-blue-500 hover:from-sky-500 hover:to-blue-600 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-sky-200 hover:shadow-xl disabled:opacity-50"
+              className="w-full bg-green-100 hover:bg-green-200 text-green-700 font-bold py-4 rounded-xl transition-all shadow-sm hover:shadow-md disabled:opacity-50"
             >
               {loading ? 'Signing in...' : 'Login'}
             </button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-gray-100 text-center">
-            <p className="text-gray-700 text-sm">
+          <div className="mt-4 text-right">
+            <button
+              type="button"
+              onClick={() => router.push('/auth/forgot-password')}
+              className="text-sm text-green-600 hover:text-green-700 font-medium transition-colors"
+            >
+              Forgot Password?
+            </button>
+          </div>
+
+          <div className="mt-6 pt-6 border-t border-gray-200 text-center">
+            <p className="text-gray-600 text-sm">
               Don't have an account?{' '}
-              <button onClick={() => router.push('/auth/register')} className="text-purple-500 hover:text-purple-600 font-semibold">
+              <button onClick={() => router.push('/auth/register')} className="text-green-600 hover:text-green-700 font-semibold">
                 Sign up
               </button>
             </p>

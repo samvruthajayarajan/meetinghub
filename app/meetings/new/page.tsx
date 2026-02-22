@@ -272,7 +272,7 @@ export default function CreateMeeting() {
                 type="button"
                 onClick={() => handleSubmit('draft')}
                 disabled={loading}
-                className="flex-1 px-6 py-3 bg-white0 hover:bg-gray-600 text-green-800 font-semibold rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
+                className="flex-1 px-6 py-3 bg-white hover:bg-gray-100 text-green-800 font-semibold rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
@@ -284,7 +284,7 @@ export default function CreateMeeting() {
                 type="button"
                 onClick={() => handleSubmit('publish')}
                 disabled={loading}
-                className="flex-1 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-green-800 font-semibold rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                className="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg flex items-center justify-center gap-2"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -302,23 +302,6 @@ export default function CreateMeeting() {
               </button>
             </div>
           </form>
-        </div>
-
-        {/* Help Text */}
-        <div className="mt-6 bg-gray-800/30 border border-green-200 rounded-xl p-4 shadow-sm">
-          <div className="flex gap-3">
-            <svg className="w-5 h-5 text-gray-300 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <div className="text-sm text-purple-900">
-              <p className="font-semibold mb-1">Tips:</p>
-              <ul className="list-disc list-inside space-y-1 text-purple-800">
-                <li>Save as draft to continue editing later</li>
-                <li>Publish when you're ready to share with participants</li>
-                <li>All fields marked with * are required</li>
-              </ul>
-            </div>
-          </div>
         </div>
       </main>
     </div>

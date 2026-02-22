@@ -2,110 +2,190 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { sendEmailViaGmail, checkGmailConnection } from '@/lib/gmailApi';
+import nodemailer from 'nodemailer';
 import { getBrowser } from '@/lib/puppeteerConfig';
 import { format } from 'date-fns';
 
-export async function GET(
+export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  const session = await getServerSession(authOptions);
+  
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
-    const { id } = await params;
+  const { id } = await params;
+  const body = await req.json();
+  const { recipients, reportData } = body;
 
-    const meeting = await prisma.meeting.findUnique({
-      where: { id },
-      include: {
-        agendaItems: { orderBy: { order: 'asc' } },
-        minutes: true,
-        user: { select: { name: true, email: true } }
+  const meeting = await prisma.meeting.findUnique({
+    where: { id },
+    include: { 
+      user: { 
+        select: { 
+          name: true, 
+          email: true,
+          smtpHost: true,
+          smtpPort: true,
+          smtpUser: true,
+          smtpPassword: true
+        } 
       }
-    });
-
-    if (!meeting) {
-      return NextResponse.json({ error: 'Meeting not found' }, { status: 404 });
     }
+  });
 
-    const html = generateMeetingHTML(meeting);
+  if (!meeting) {
+    return NextResponse.json({ error: 'Meeting not found' }, { status: 404 });
+  }
 
+  // Check if user has Gmail connected
+  const hasGmail = await checkGmailConnection(session.user.email);
+
+  if (!hasGmail) {
+    // Check if user has SMTP configured as fallback
+    if (!meeting.user.smtpHost || !meeting.user.smtpUser || !meeting.user.smtpPassword) {
+      return NextResponse.json({ 
+        error: 'Please connect your Gmail account in Profile to send emails from your account.',
+        configured: false,
+        needsGmailAuth: true
+      }, { status: 400 });
+    }
+  }
+
+  try {
+    // Generate Report PDF
+    const html = generateCustomReportHTML(meeting, reportData);
     const browser = await getBrowser();
     const page = await browser.newPage();
     await page.setContent(html);
-    const pdf = await page.pdf({ format: 'A4', printBackground: true });
+    const pdfBuffer = await page.pdf({ format: 'a4', printBackground: true });
     await browser.close();
 
-    // Create report record in database
-    const reportCount = await prisma.report.count({ where: { meetingId: id } });
-    const report = await prisma.report.create({
-      data: {
-        meetingId: id,
-        version: reportCount + 1
-      }
-    });
+    // Generate email HTML
+    const emailHtml = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; border-radius: 10px 10px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">📊 Meeting Report</h1>
+        </div>
+        
+        <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
+          <h2 style="color: #1f2937; margin-top: 0;">${meeting.title}</h2>
+          
+          <p style="color: #6b7280; font-size: 16px; line-height: 1.6;">
+            Please find attached the comprehensive meeting report for our meeting held on 
+            <strong>${format(new Date(meeting.date), 'PPPP')}</strong> at 
+            <strong>${format(new Date(meeting.date), 'p')}</strong>.
+          </p>
 
-    console.log('Report created:', report);
+          <div style="background: #f0fdf4; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0; border-radius: 4px;">
+            <p style="margin: 0; color: #065f46; font-weight: 600;">📎 Report Attached</p>
+            <p style="margin: 5px 0 0 0; color: #047857;">The PDF contains the complete meeting report with all sections including executive summary, objectives, discussions, decisions, action items, and more.</p>
+          </div>
 
-    return new NextResponse(Buffer.from(pdf), {
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="meeting-${meeting.title.replace(/[^a-zA-Z0-9-_]/g, '-')}.pdf"`
-      }
+          <div style="background: #eff6ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 0 0 10px 0; color: #1e40af; font-weight: 600;">Report Sections:</p>
+            <ul style="margin: 0; padding-left: 20px; color: #1f2937;">
+              <li style="margin: 5px 0;">Meeting Details & Information</li>
+              <li style="margin: 5px 0;">Executive Summary</li>
+              <li style="margin: 5px 0;">Meeting Objectives</li>
+              <li style="margin: 5px 0;">Key Discussion Points</li>
+              <li style="margin: 5px 0;">Decisions Taken</li>
+              <li style="margin: 5px 0;">Action Items</li>
+              <li style="margin: 5px 0;">Risks Identified</li>
+              <li style="margin: 5px 0;">Conclusion</li>
+            </ul>
+          </div>
+        </div>
+
+        <div style="text-align: center; padding: 20px; color: #9ca3af; font-size: 12px;">
+          <p style="margin: 5px 0;">This is an automated email from Meeting Management System</p>
+          <p style="margin: 5px 0;">Sent on ${new Date().toLocaleString()}</p>
+        </div>
+      </div>
+    `;
+
+    const attachments = [{
+      filename: `meeting-report-${meeting.title.replace(/[^a-zA-Z0-9-_]/g, '-')}.pdf`,
+      content: Buffer.from(pdfBuffer),
+      contentType: 'application/pdf'
+    }];
+
+    // Try Gmail API first, fallback to SMTP
+    if (hasGmail) {
+      await sendEmailViaGmail(
+        session.user.email,
+        recipients,
+        `Meeting Report: ${meeting.title}`,
+        emailHtml,
+        attachments
+      );
+    } else {
+      // Fallback to SMTP
+      const smtpConfig = {
+        host: meeting.user.smtpHost!,
+        port: meeting.user.smtpPort || 587,
+        secure: false,
+        auth: {
+          user: meeting.user.smtpUser!,
+          pass: meeting.user.smtpPassword!
+        }
+      };
+
+      const transporter = nodemailer.createTransport(smtpConfig);
+
+      await transporter.sendMail({
+        from: `"${meeting.user.name}" <${meeting.user.smtpUser}>`,
+        replyTo: meeting.user.email,
+        to: recipients.join(', '),
+        subject: `Meeting Report: ${meeting.title}`,
+        html: emailHtml,
+        attachments: attachments.map(att => ({
+          filename: att.filename,
+          content: att.content,
+          contentType: att.contentType
+        }))
+      });
+    }
+
+    return NextResponse.json({ 
+      message: 'Report sent successfully from your Gmail account',
+      configured: true,
+      method: hasGmail ? 'gmail' : 'smtp'
     });
-  } catch (error) {
-    console.error('Error in PDF generation:', error);
-    return NextResponse.json({ error: 'Failed to generate PDF', details: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
+  } catch (error: any) {
+    console.error('Email error:', error);
+    return NextResponse.json({ 
+      error: `Failed to send email: ${error.message}`,
+      configured: true
+    }, { status: 500 });
   }
 }
 
-function generateMeetingHTML(meeting: any) {
-  // Parse agenda from agendaData field (or fallback to description for backward compatibility)
-  let agendaData: any = null;
-  
-  // Try agendaData first
-  if (meeting.agendaData) {
-    try {
-      const parsed = JSON.parse(meeting.agendaData);
-      if (parsed.savedAgendas && parsed.savedAgendas.length > 0) {
-        agendaData = parsed.savedAgendas[parsed.savedAgendas.length - 1];
-      }
-    } catch (e) {
-      console.error('Error parsing agendaData:', e);
-    }
-  }
-  
-  // Fallback to description if agendaData is not available
-  if (!agendaData && meeting.description) {
-    try {
-      const parsed = JSON.parse(meeting.description);
-      if (parsed.savedAgendas && parsed.savedAgendas.length > 0) {
-        agendaData = parsed.savedAgendas[parsed.savedAgendas.length - 1];
-      }
-    } catch (e) {
-      // Not JSON, skip
-    }
-  }
+function generateCustomReportHTML(meeting: any, reportData: any) {
+  const {
+    executiveSummary,
+    objectives,
+    keyDiscussionPoints,
+    decisionsTaken,
+    actionItems,
+    risksIdentified,
+    conclusion
+  } = reportData;
 
-  // Parse minutes
-  let minutesData: any = null;
+  // Parse minutes for attendees
+  let attendees: string[] = [];
   if (meeting.minutes?.discussions) {
     try {
       const parsed = JSON.parse(meeting.minutes.discussions);
       if (parsed.savedMinutes && parsed.savedMinutes.length > 0) {
-        minutesData = parsed.savedMinutes[parsed.savedMinutes.length - 1]; // Get latest minutes
+        const minutesData = parsed.savedMinutes[parsed.savedMinutes.length - 1];
+        attendees = minutesData.attendees || [];
       }
     } catch (e) {
-      // Not JSON, use raw data
-      minutesData = {
-        discussions: meeting.minutes.discussions,
-        attendees: meeting.minutes.attendees || [],
-        decisions: [],
-        actionItems: []
-      };
+      // Not JSON
     }
   }
 
@@ -282,36 +362,36 @@ function generateMeetingHTML(meeting: any) {
             <td>${meeting.meetingLink}</td>
           </tr>
         ` : ''}
-        ${minutesData?.attendees && minutesData.attendees.length > 0 ? `
+        ${attendees.length > 0 ? `
           <tr>
             <td>Total Attendees</td>
-            <td>${minutesData.attendees.length} participants</td>
+            <td>${attendees.length} participants</td>
           </tr>
         ` : ''}
       </table>
 
-      ${minutesData?.attendees && minutesData.attendees.length > 0 ? `
+      ${attendees.length > 0 ? `
         <h3>Attendees</h3>
         <div class="attendees-list">
-          ${minutesData.attendees.join(', ')}
+          ${attendees.join(', ')}
         </div>
       ` : ''}
 
       <!-- 2. EXECUTIVE SUMMARY -->
       <div class="section">
         <h2>2. Executive Summary</h2>
-        ${minutesData?.discussions ? `
-          <div class="content-box">${minutesData.discussions}</div>
+        ${executiveSummary ? `
+          <div class="content-box">${executiveSummary}</div>
         ` : `
-          <div class="no-data">No executive summary available</div>
+          <div class="no-data">No executive summary provided</div>
         `}
       </div>
 
       <!-- 3. OBJECTIVES -->
       <div class="section">
         <h2>3. Meeting Objectives</h2>
-        ${agendaData?.objectives ? `
-          <div class="content-box">${agendaData.objectives}</div>
+        ${objectives ? `
+          <div class="content-box">${objectives}</div>
         ` : `
           <div class="no-data">No objectives specified</div>
         `}
@@ -320,17 +400,11 @@ function generateMeetingHTML(meeting: any) {
       <!-- 4. KEY DISCUSSION POINTS -->
       <div class="section">
         <h2>4. Key Discussion Points</h2>
-        ${agendaData?.agendaItems && agendaData.agendaItems.length > 0 ? `
-          ${agendaData.agendaItems.map((item: any, index: number) => `
+        ${keyDiscussionPoints && keyDiscussionPoints.length > 0 ? `
+          ${keyDiscussionPoints.map((item: any, index: number) => `
             <div class="item-box">
-              <span class="item-number">${index + 1}. ${item.topic}</span>
+              <span class="item-number">${index + 1}. ${item.topic || 'Untitled'}</span>
               ${item.description ? `<div class="item-content">${item.description}</div>` : ''}
-              ${item.presenter || item.duration ? `
-                <div class="meta-info">
-                  ${item.presenter ? `Presenter: ${item.presenter}` : ''}
-                  ${item.duration ? ` | Duration: ${item.duration} minutes` : ''}
-                </div>
-              ` : ''}
             </div>
           `).join('')}
         ` : `
@@ -341,9 +415,9 @@ function generateMeetingHTML(meeting: any) {
       <!-- 5. DECISIONS TAKEN -->
       <div class="section">
         <h2>5. Decisions Taken</h2>
-        ${minutesData?.decisions && minutesData.decisions.length > 0 ? `
+        ${decisionsTaken && decisionsTaken.length > 0 ? `
           <ul>
-            ${minutesData.decisions.map((decision: string) => `
+            ${decisionsTaken.map((decision: string) => `
               <li>${decision}</li>
             `).join('')}
           </ul>
@@ -355,10 +429,10 @@ function generateMeetingHTML(meeting: any) {
       <!-- 6. ACTION ITEMS -->
       <div class="section">
         <h2>6. Action Items</h2>
-        ${minutesData?.actionItems && minutesData.actionItems.length > 0 ? `
-          ${minutesData.actionItems.map((item: any, index: number) => `
+        ${actionItems && actionItems.length > 0 ? `
+          ${actionItems.map((item: any, index: number) => `
             <div class="item-box">
-              <span class="item-number">${index + 1}. ${item.task}</span>
+              <span class="item-number">${index + 1}. ${item.task || 'Untitled'}</span>
               ${item.assignedTo || item.dueDate ? `
                 <div class="meta-info">
                   ${item.assignedTo ? `Assigned to: ${item.assignedTo}` : ''}
@@ -367,11 +441,6 @@ function generateMeetingHTML(meeting: any) {
               ` : ''}
             </div>
           `).join('')}
-        ` : agendaData?.actionItems && agendaData.actionItems.length > 0 ? `
-          <h3>Pre-Meeting Action Items</h3>
-          <ul>
-            ${agendaData.actionItems.map((item: string) => `<li>${item}</li>`).join('')}
-          </ul>
         ` : `
           <div class="no-data">No action items recorded</div>
         `}
@@ -380,10 +449,9 @@ function generateMeetingHTML(meeting: any) {
       <!-- 7. RISKS IDENTIFIED -->
       <div class="section">
         <h2>7. Risks Identified</h2>
-        ${agendaData?.preparationRequired && agendaData.preparationRequired.length > 0 ? `
-          <h3>Preparation Requirements & Potential Risks</h3>
+        ${risksIdentified && risksIdentified.length > 0 ? `
           <ul>
-            ${agendaData.preparationRequired.map((item: string) => `<li>${item}</li>`).join('')}
+            ${risksIdentified.map((risk: string) => `<li>${risk}</li>`).join('')}
           </ul>
         ` : `
           <div class="no-data">No risks identified</div>
@@ -393,17 +461,11 @@ function generateMeetingHTML(meeting: any) {
       <!-- 8. CONCLUSION -->
       <div class="section">
         <h2>8. Conclusion</h2>
-        ${minutesData?.nextMeeting ? `
-          <div class="content-box">
-            <strong>Next Meeting Scheduled:</strong><br/>
-            ${format(new Date(minutesData.nextMeeting), 'EEEE, MMMM d, yyyy \'at\' h:mm a')}
-          </div>
-        ` : ''}
-        <div class="content-box">
-          This meeting report summarizes the key discussions, decisions, and action items from the ${meeting.title}. 
-          All participants are requested to review their assigned action items and complete them by the specified due dates.
-          ${minutesData?.nextMeeting ? ' Please mark your calendars for the next meeting as scheduled above.' : ''}
-        </div>
+        ${conclusion ? `
+          <div class="content-box">${conclusion}</div>
+        ` : `
+          <div class="no-data">No conclusion provided</div>
+        `}
       </div>
 
       <div class="footer">

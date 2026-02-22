@@ -11,6 +11,11 @@ export default function UserDashboard() {
   const [loading, setLoading] = useState(true);
   const [activeMenu, setActiveMenu] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  
+  // Profile edit states
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editedName, setEditedName] = useState('');
+  const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -21,6 +26,7 @@ export default function UserDashboard() {
   useEffect(() => {
     if (status === 'authenticated') {
       fetchMeetings();
+      setEditedName(session?.user?.name || '');
     }
   }, [status]);
 
@@ -41,6 +47,38 @@ export default function UserDashboard() {
   const handleLogout = async () => {
     await signOut({ redirect: false });
     router.push('/');
+  };
+
+  const handleUpdateProfile = async () => {
+    if (!editedName.trim()) {
+      alert('Name cannot be empty');
+      return;
+    }
+
+    setUpdating(true);
+    try {
+      const response = await fetch('/api/users/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: editedName }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update profile');
+      }
+
+      alert('Profile updated successfully!');
+      setIsEditingProfile(false);
+      // Refresh session
+      window.location.reload();
+    } catch (error: any) {
+      console.error('Error updating profile:', error);
+      alert(`Failed to update profile: ${error.message}`);
+    } finally {
+      setUpdating(false);
+    }
   };
 
   if (status === 'loading' || loading) {
@@ -482,11 +520,12 @@ export default function UserDashboard() {
                       View Agenda
                     </button>
                     <button
-                      onClick={() => router.push(`/meetings/${meeting.id}/minutes`)}
+                      onClick={() => router.push(`/meetings/${meeting.id}/view-minutes-new`)}
                       className="w-full px-4 py-2 bg-yellow-100 text-yellow-700 rounded-xl hover:bg-yellow-200 transition-colors text-sm font-medium flex items-center justify-center gap-2"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                       </svg>
                       View Minutes
                     </button>
@@ -495,9 +534,10 @@ export default function UserDashboard() {
                       className="w-full px-4 py-2 bg-green-100 text-green-700 rounded-xl hover:bg-green-200 transition-colors text-sm font-medium flex items-center justify-center gap-2"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                       </svg>
-                      Download Report
+                      View Reports
                     </button>
                   </div>
                 </div>
@@ -525,60 +565,59 @@ export default function UserDashboard() {
         {activeMenu === 'minutes' && (
           <div className="p-6">
             <div className="mb-6">
-              <h1 className="text-2xl font-bold text-gray-800">Meeting Minutes</h1>
-              <p className="text-gray-600">Generate and manage meeting minutes</p>
+              <h1 className="text-2xl font-bold text-gray-800">Create Meeting Minutes</h1>
+              <p className="text-gray-600">Select a meeting to create or manage minutes</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {meetings.map((meeting) => (
-                <div
-                  key={meeting.id}
-                  className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 hover:shadow-md transition-all"
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                      <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="divide-y divide-gray-200">
+                {meetings.map((meeting) => (
+                  <div
+                    key={meeting.id}
+                    onClick={() => router.push(`/meetings/${meeting.id}/minutes`)}
+                    className="p-4 hover:bg-gray-50 cursor-pointer transition-colors flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-4 flex-1">
+                      <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-lg font-semibold text-gray-800 truncate">{meeting.title}</h3>
+                        <p className="text-sm text-gray-500">
+                          {new Date(meeting.date).toLocaleDateString('en-US', { 
+                            weekday: 'short',
+                            month: 'short', 
+                            day: 'numeric', 
+                            year: 'numeric' 
+                          })} at {new Date(meeting.date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
                     </div>
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      meeting.minutes ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
-                    }`}>
-                      {meeting.minutes ? 'Generated' : 'Pending'}
-                    </span>
                   </div>
-                  
-                  <h3 className="text-lg font-semibold text-gray-800 mb-2">{meeting.title}</h3>
-                  <p className="text-sm text-gray-500 mb-4">
-                    {new Date(meeting.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                  </p>
-                  
-                  <button
-                    onClick={() => router.push(`/meetings/${meeting.id}/minutes`)}
-                    className="w-full px-4 py-2 bg-green-100 text-green-700 rounded-xl hover:bg-green-200 transition-colors text-sm font-medium flex items-center justify-center gap-2"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                ))}
+                
+                {meetings.length === 0 && (
+                  <div className="text-center py-12">
+                    <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                     </svg>
-                    {meeting.minutes ? 'View Minutes' : 'Generate Minutes'}
-                  </button>
-                </div>
-              ))}
-              
-              {meetings.length === 0 && (
-                <div className="col-span-full text-center py-12 bg-white rounded-3xl shadow-sm border border-gray-200">
-                  <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                  <p className="text-gray-400 mb-4">No meetings available</p>
-                  <button
-                    onClick={() => router.push('/meetings/new')}
-                    className="px-6 py-3 bg-green-100 text-green-700 rounded-xl hover:bg-green-200 transition-colors font-medium"
-                  >
-                    Create Your First Meeting
-                  </button>
-                </div>
-              )}
+                    <p className="text-gray-400 mb-4">No meetings available</p>
+                    <button
+                      onClick={() => setActiveMenu('create')}
+                      className="px-6 py-3 bg-green-100 text-green-700 rounded-xl hover:bg-green-200 transition-colors font-medium"
+                    >
+                      Create Your First Meeting
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -596,13 +635,24 @@ export default function UserDashboard() {
                 <div className="w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center text-white font-bold text-2xl shadow-md">
                   {session?.user?.name?.charAt(0).toUpperCase()}
                 </div>
-                <div>
+                <div className="flex-1">
                   <h2 className="text-xl font-semibold text-gray-800">{session?.user?.name}</h2>
                   <p className="text-gray-600">{session?.user?.email}</p>
                   <span className="inline-block mt-2 px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
                     {session?.user?.role || 'USER'}
                   </span>
                 </div>
+                {!isEditingProfile && (
+                  <button
+                    onClick={() => setIsEditingProfile(true)}
+                    className="px-4 py-2 bg-green-100 text-green-700 rounded-xl hover:bg-green-200 transition-colors font-medium flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    Edit
+                  </button>
+                )}
               </div>
 
               <div className="space-y-4">
@@ -610,9 +660,14 @@ export default function UserDashboard() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
                   <input
                     type="text"
-                    value={session?.user?.name || ''}
-                    disabled
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800"
+                    value={isEditingProfile ? editedName : session?.user?.name || ''}
+                    onChange={(e) => setEditedName(e.target.value)}
+                    disabled={!isEditingProfile}
+                    className={`w-full px-4 py-3 border rounded-xl text-gray-800 ${
+                      isEditingProfile 
+                        ? 'bg-white border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-transparent' 
+                        : 'bg-gray-50 border-gray-200'
+                    }`}
                   />
                 </div>
 
@@ -624,7 +679,41 @@ export default function UserDashboard() {
                     disabled
                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800"
                   />
+                  <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
                 </div>
+
+                {isEditingProfile && (
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      onClick={() => {
+                        setIsEditingProfile(false);
+                        setEditedName(session?.user?.name || '');
+                      }}
+                      className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-colors font-medium"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleUpdateProfile}
+                      disabled={updating}
+                      className="flex-1 px-4 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {updating ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          <span>Updating...</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          Update Profile
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
 
                 <div className="pt-4 border-t border-gray-200">
                   <h3 className="text-lg font-semibold text-gray-800 mb-3">Email Integration</h3>
@@ -641,15 +730,6 @@ export default function UserDashboard() {
                       <path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z"/>
                     </svg>
                     Connect Gmail Account
-                  </button>
-                </div>
-
-                <div className="pt-4">
-                  <button
-                    onClick={() => router.push('/auth/signin')}
-                    className="px-6 py-3 bg-yellow-100 text-yellow-700 rounded-xl hover:bg-yellow-200 transition-colors font-medium"
-                  >
-                    Change Password
                   </button>
                 </div>
               </div>

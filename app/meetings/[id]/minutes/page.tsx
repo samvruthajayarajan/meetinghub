@@ -31,8 +31,6 @@ export default function MinutesPage({ params }: { params: Promise<{ id: string }
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [meeting, setMeeting] = useState<any>(null);
-  const [savedMinutes, setSavedMinutes] = useState<SavedMinutes[]>([]);
-  const [viewingMinutesId, setViewingMinutesId] = useState<string | null>(null);
   
   const [minutesData, setMinutesData] = useState<MinutesData>({
     attendees: [],
@@ -69,18 +67,6 @@ export default function MinutesPage({ params }: { params: Promise<{ id: string }
       const data = await response.json();
       setMeeting(data);
       
-      // Parse saved minutes from minutes field
-      if (data.minutes) {
-        try {
-          const parsed = JSON.parse(data.minutes.discussions);
-          if (parsed.savedMinutes && Array.isArray(parsed.savedMinutes)) {
-            setSavedMinutes(parsed.savedMinutes);
-          }
-        } catch (e) {
-          // If not JSON, keep it as is
-        }
-      }
-      
       setLoading(false);
     } catch (error) {
       console.error('Error fetching meeting:', error);
@@ -94,18 +80,30 @@ export default function MinutesPage({ params }: { params: Promise<{ id: string }
       return;
     }
 
-    const newSavedMinutes: SavedMinutes = {
-      ...minutesData,
-      id: Date.now().toString(),
-      submitted: true,
-      submittedAt: new Date().toISOString(),
-    };
-
-    const updatedSavedMinutes = [...savedMinutes, newSavedMinutes];
-    setSavedMinutes(updatedSavedMinutes);
-
     setSaving(true);
     try {
+      // Get existing saved minutes
+      let existingSavedMinutes: any[] = [];
+      if (meeting?.minutes?.discussions) {
+        try {
+          const parsed = JSON.parse(meeting.minutes.discussions);
+          if (parsed.savedMinutes && Array.isArray(parsed.savedMinutes)) {
+            existingSavedMinutes = parsed.savedMinutes;
+          }
+        } catch (e) {
+          // Not JSON
+        }
+      }
+
+      const newSavedMinutes: SavedMinutes = {
+        ...minutesData,
+        id: Date.now().toString(),
+        submitted: true,
+        submittedAt: new Date().toISOString(),
+      };
+
+      const updatedSavedMinutes = [...existingSavedMinutes, newSavedMinutes];
+
       const response = await fetch(`/api/meetings/${resolvedParams.id}/minutes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -125,38 +123,12 @@ export default function MinutesPage({ params }: { params: Promise<{ id: string }
           actionItems: [],
           nextMeeting: '',
         });
-        alert('Minutes submitted successfully!');
+        alert('Minutes submitted successfully! View them in the Reports page.');
         await fetchMeeting();
       }
     } catch (error) {
       console.error('Error saving minutes:', error);
       alert('Failed to submit minutes.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDeleteSavedMinutes = async (minutesId: string) => {
-    if (!confirm('Are you sure you want to delete these minutes?')) return;
-
-    const updatedSavedMinutes = savedMinutes.filter(m => m.id !== minutesId);
-    setSavedMinutes(updatedSavedMinutes);
-
-    setSaving(true);
-    try {
-      await fetch(`/api/meetings/${resolvedParams.id}/minutes`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          discussions: JSON.stringify({ savedMinutes: updatedSavedMinutes }),
-          decisions: '',
-          actionItems: '',
-          attendees: [],
-        }),
-      });
-      await fetchMeeting();
-    } catch (error) {
-      console.error('Error deleting minutes:', error);
     } finally {
       setSaving(false);
     }
@@ -305,44 +277,44 @@ export default function MinutesPage({ params }: { params: Promise<{ id: string }
   return (
     <div className="min-h-screen bg-white">
       <header className="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-3 sm:py-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
               <button
                 onClick={() => router.push('/user')}
-                className="text-gray-600 hover:text-gray-800 transition-colors"
+                className="text-gray-600 hover:text-gray-800 transition-colors flex-shrink-0"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
               </button>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-800">Meeting Minutes</h1>
-                <p className="text-sm text-gray-600">{meeting?.title}</p>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-lg sm:text-2xl font-bold text-gray-800 truncate">Meeting Minutes</h1>
+                <p className="text-xs sm:text-sm text-gray-600 truncate">{meeting?.title}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
               <button
                 onClick={handleGenerateMinutes}
                 disabled={generating || saving}
-                className="px-4 py-2 bg-green-100 text-green-700 hover:bg-green-200 font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm"
+                className="px-2 py-2 sm:px-4 sm:py-2 bg-green-100 text-green-700 hover:bg-green-200 font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 sm:gap-2 shadow-sm text-xs sm:text-base"
               >
                 {generating ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-700"></div>
-                    <span>Generating...</span>
+                    <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-b-2 border-green-700"></div>
+                    <span className="hidden sm:inline">Generating...</span>
                   </>
                 ) : (
                   <>
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
-                    <span>Generate Minutes</span>
+                    <span className="hidden sm:inline">Generate Minutes</span>
                   </>
                 )}
               </button>
               {saving && (
-                <div className="flex items-center gap-2 text-green-700">
+                <div className="hidden sm:flex items-center gap-2 text-green-700">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-700"></div>
                   <span className="text-sm">Saving...</span>
                 </div>
@@ -352,91 +324,7 @@ export default function MinutesPage({ params }: { params: Promise<{ id: string }
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-8 space-y-6">
-        {/* Saved Minutes Section */}
-        {savedMinutes.length > 0 && (
-          <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">Submitted Minutes ({savedMinutes.length})</h2>
-            <div className="space-y-3">
-              {savedMinutes.map((minutes) => (
-                <div key={minutes.id} className="p-4 bg-gray-50 border border-gray-200 rounded-lg shadow-sm">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <div>
-                          <p className="text-gray-800 font-semibold">Minutes submitted on {new Date(minutes.submittedAt).toLocaleString()}</p>
-                          <p className="text-gray-600 text-sm">{minutes.attendees.length} attendees, {minutes.actionItems.length} action items</p>
-                        </div>
-                      </div>
-                      {viewingMinutesId === minutes.id && (
-                        <div className="mt-4 space-y-4 pl-8">
-                          {minutes.attendees.length > 0 && (
-                            <div>
-                              <p className="text-sm font-semibold text-green-700 mb-1">Attendees:</p>
-                              <p className="text-gray-700 text-sm">{minutes.attendees.join(', ')}</p>
-                            </div>
-                          )}
-                          <div>
-                            <p className="text-sm font-semibold text-green-700 mb-1">Discussions:</p>
-                            <p className="text-gray-700 text-sm whitespace-pre-wrap">{minutes.discussions}</p>
-                          </div>
-                          {minutes.decisions.length > 0 && (
-                            <div>
-                              <p className="text-sm font-semibold text-green-700 mb-1">Decisions:</p>
-                              <ul className="list-disc list-inside text-gray-700 text-sm space-y-1">
-                                {minutes.decisions.map((item, idx) => (
-                                  <li key={idx}>{item}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                          {minutes.actionItems.length > 0 && (
-                            <div>
-                              <p className="text-sm font-semibold text-yellow-700 mb-1">Action Items:</p>
-                              <div className="space-y-2">
-                                {minutes.actionItems.map((item, idx) => (
-                                  <div key={idx} className="text-sm bg-gray-50 p-2 rounded border border-gray-200">
-                                    <p className="text-gray-800 font-medium">{item.task}</p>
-                                    <p className="text-gray-600">Assigned to: {item.assignedTo}</p>
-                                    <p className="text-gray-600">Due: {new Date(item.dueDate).toLocaleDateString()}</p>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                          {minutes.nextMeeting && (
-                            <div>
-                              <p className="text-sm font-semibold text-green-700 mb-1">Next Meeting:</p>
-                              <p className="text-gray-700 text-sm">{new Date(minutes.nextMeeting).toLocaleString()}</p>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setViewingMinutesId(viewingMinutesId === minutes.id ? null : minutes.id)}
-                        className="px-3 py-1.5 bg-green-100 text-green-700 hover:bg-green-200 text-sm rounded-lg transition-colors"
-                      >
-                        {viewingMinutesId === minutes.id ? 'Hide' : 'View'}
-                      </button>
-                      <button
-                        onClick={() => handleDeleteSavedMinutes(minutes.id)}
-                        className="px-3 py-1.5 bg-red-100 text-red-700 hover:bg-red-200 text-sm rounded-lg transition-colors"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
+      <main className="max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-8 space-y-4 sm:space-y-6">
         {/* Meeting Info */}
         <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -462,45 +350,45 @@ export default function MinutesPage({ params }: { params: Promise<{ id: string }
         </div>
 
         {/* Attendees */}
-        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-          <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-            <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="bg-white border border-gray-200 rounded-xl p-3 sm:p-6 shadow-sm">
+          <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4 flex items-center gap-2">
+            <svg className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
-            Attendees
+            <span className="text-base sm:text-xl">Attendees</span>
           </h2>
-          <div className="space-y-3 mb-4">
+          <div className="space-y-2 sm:space-y-3 mb-3 sm:mb-4">
             {minutesData.attendees.map((attendee, index) => (
-              <div key={index} className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                <span className="text-gray-800">{attendee}</span>
+              <div key={index} className="flex items-center justify-between p-2 sm:p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                <span className="text-sm sm:text-base text-gray-800 break-words flex-1 mr-2">{attendee}</span>
                 <button
                   onClick={() => handleRemoveAttendee(index)}
-                  className="text-red-600 hover:text-red-700 transition-colors"
+                  className="text-red-600 hover:text-red-700 transition-colors flex-shrink-0"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               </div>
             ))}
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <input
               type="text"
               value={newAttendee}
               onChange={(e) => setNewAttendee(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleAddAttendee()}
-              className="flex-1 px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all"
+              className="flex-1 px-3 sm:px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm sm:text-base text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all"
               placeholder="Add attendee name..."
             />
             <button
               onClick={handleAddAttendee}
-              className="px-4 py-2 bg-green-100 text-green-700 hover:bg-green-200 rounded-lg transition-colors flex items-center gap-2"
+              className="px-4 py-2 bg-green-100 text-green-700 hover:bg-green-200 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
-              Add
+              <span>Add</span>
             </button>
           </div>
         </div>
@@ -523,45 +411,45 @@ export default function MinutesPage({ params }: { params: Promise<{ id: string }
         </div>
 
         {/* Decisions */}
-        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-          <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-            <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="bg-white border border-gray-200 rounded-xl p-3 sm:p-6 shadow-sm">
+          <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4 flex items-center gap-2">
+            <svg className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            Decisions Made
+            <span className="text-base sm:text-xl">Decisions Made</span>
           </h2>
-          <div className="space-y-3 mb-4">
+          <div className="space-y-2 sm:space-y-3 mb-3 sm:mb-4">
             {minutesData.decisions.map((decision, index) => (
-              <div key={index} className="flex items-start gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                <div className="flex-1 text-gray-800">{decision}</div>
+              <div key={index} className="flex items-start gap-2 sm:gap-3 p-2 sm:p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                <div className="flex-1 text-sm sm:text-base text-gray-800 break-words">{decision}</div>
                 <button
                   onClick={() => handleRemoveDecision(index)}
-                  className="text-red-600 hover:text-red-700 transition-colors"
+                  className="text-red-600 hover:text-red-700 transition-colors flex-shrink-0"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               </div>
             ))}
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <input
               type="text"
               value={newDecision}
               onChange={(e) => setNewDecision(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleAddDecision()}
-              className="flex-1 px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all"
+              className="flex-1 px-3 sm:px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm sm:text-base text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all"
               placeholder="Add decision..."
             />
             <button
               onClick={handleAddDecision}
-              className="px-4 py-2 bg-green-100 text-green-700 hover:bg-green-200 rounded-lg transition-colors flex items-center gap-2"
+              className="px-4 py-2 bg-green-100 text-green-700 hover:bg-green-200 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
-              Add
+              <span>Add</span>
             </button>
           </div>
         </div>
@@ -668,27 +556,16 @@ export default function MinutesPage({ params }: { params: Promise<{ id: string }
 
         {/* Submit Button */}
         <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-          <div className="space-y-4">
-            <div className="flex items-start gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
-              <svg className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <div className="text-sm text-green-900">
-                <p className="font-semibold mb-1">Ready to submit?</p>
-                <p>Make sure you've added discussions. After submitting, you can create new minutes.</p>
-              </div>
-            </div>
-            <button
-              onClick={handleSubmitMinutes}
-              disabled={saving}
-              className="w-full py-4 px-6 bg-green-100 text-green-700 hover:bg-green-200 text-lg font-bold rounded-xl shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span>Submit Minutes</span>
-            </button>
-          </div>
+          <button
+            onClick={handleSubmitMinutes}
+            disabled={saving}
+            className="w-full py-4 px-6 bg-green-600 hover:bg-green-700 text-white text-lg font-bold rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>Submit Minutes</span>
+          </button>
         </div>
       </main>
     </div>

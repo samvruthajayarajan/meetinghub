@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { getBrowser } from '@/lib/puppeteerConfig';
 import { format } from 'date-fns';
 
-export async function GET(
+export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -17,12 +17,11 @@ export async function GET(
     }
 
     const { id } = await params;
+    const reportData = await req.json();
 
     const meeting = await prisma.meeting.findUnique({
       where: { id },
       include: {
-        agendaItems: { orderBy: { order: 'asc' } },
-        minutes: true,
         user: { select: { name: true, email: true } }
       }
     });
@@ -31,81 +30,57 @@ export async function GET(
       return NextResponse.json({ error: 'Meeting not found' }, { status: 404 });
     }
 
-    const html = generateMeetingHTML(meeting);
+    const html = generateCustomReportHTML(meeting, reportData);
 
     const browser = await getBrowser();
     const page = await browser.newPage();
     await page.setContent(html);
-    const pdf = await page.pdf({ format: 'A4', printBackground: true });
+    const pdf = await page.pdf({ format: 'a4', printBackground: true });
     await browser.close();
 
     // Create report record in database
     const reportCount = await prisma.report.count({ where: { meetingId: id } });
-    const report = await prisma.report.create({
+    await prisma.report.create({
       data: {
         meetingId: id,
         version: reportCount + 1
       }
     });
 
-    console.log('Report created:', report);
-
     return new NextResponse(Buffer.from(pdf), {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="meeting-${meeting.title.replace(/[^a-zA-Z0-9-_]/g, '-')}.pdf"`
+        'Content-Disposition': `attachment; filename="meeting-report-${meeting.title.replace(/[^a-zA-Z0-9-_]/g, '-')}.pdf"`
       }
     });
   } catch (error) {
-    console.error('Error in PDF generation:', error);
+    console.error('Error in custom report generation:', error);
     return NextResponse.json({ error: 'Failed to generate PDF', details: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
   }
 }
 
-function generateMeetingHTML(meeting: any) {
-  // Parse agenda from agendaData field (or fallback to description for backward compatibility)
-  let agendaData: any = null;
-  
-  // Try agendaData first
-  if (meeting.agendaData) {
-    try {
-      const parsed = JSON.parse(meeting.agendaData);
-      if (parsed.savedAgendas && parsed.savedAgendas.length > 0) {
-        agendaData = parsed.savedAgendas[parsed.savedAgendas.length - 1];
-      }
-    } catch (e) {
-      console.error('Error parsing agendaData:', e);
-    }
-  }
-  
-  // Fallback to description if agendaData is not available
-  if (!agendaData && meeting.description) {
-    try {
-      const parsed = JSON.parse(meeting.description);
-      if (parsed.savedAgendas && parsed.savedAgendas.length > 0) {
-        agendaData = parsed.savedAgendas[parsed.savedAgendas.length - 1];
-      }
-    } catch (e) {
-      // Not JSON, skip
-    }
-  }
+function generateCustomReportHTML(meeting: any, reportData: any) {
+  const {
+    executiveSummary,
+    objectives,
+    keyDiscussionPoints,
+    decisionsTaken,
+    actionItems,
+    risksIdentified,
+    conclusion
+  } = reportData;
 
-  // Parse minutes
-  let minutesData: any = null;
+  // Parse minutes for attendees
+  let attendees: string[] = [];
   if (meeting.minutes?.discussions) {
     try {
       const parsed = JSON.parse(meeting.minutes.discussions);
       if (parsed.savedMinutes && parsed.savedMinutes.length > 0) {
-        minutesData = parsed.savedMinutes[parsed.savedMinutes.length - 1]; // Get latest minutes
+        const minutesData = parsed.savedMinutes[parsed.savedMinutes.length - 1];
+        attendees = minutesData.attendees || [];
       }
     } catch (e) {
-      // Not JSON, use raw data
-      minutesData = {
-        discussions: meeting.minutes.discussions,
-        attendees: meeting.minutes.attendees || [],
-        decisions: [],
-        actionItems: []
-      };
+      // Not JSON
     }
   }
 
@@ -282,36 +257,36 @@ function generateMeetingHTML(meeting: any) {
             <td>${meeting.meetingLink}</td>
           </tr>
         ` : ''}
-        ${minutesData?.attendees && minutesData.attendees.length > 0 ? `
+        ${attendees.length > 0 ? `
           <tr>
             <td>Total Attendees</td>
-            <td>${minutesData.attendees.length} participants</td>
+            <td>${attendees.length} participants</td>
           </tr>
         ` : ''}
       </table>
 
-      ${minutesData?.attendees && minutesData.attendees.length > 0 ? `
+      ${attendees.length > 0 ? `
         <h3>Attendees</h3>
         <div class="attendees-list">
-          ${minutesData.attendees.join(', ')}
+          ${attendees.join(', ')}
         </div>
       ` : ''}
 
       <!-- 2. EXECUTIVE SUMMARY -->
       <div class="section">
         <h2>2. Executive Summary</h2>
-        ${minutesData?.discussions ? `
-          <div class="content-box">${minutesData.discussions}</div>
+        ${executiveSummary ? `
+          <div class="content-box">${executiveSummary}</div>
         ` : `
-          <div class="no-data">No executive summary available</div>
+          <div class="no-data">No executive summary provided</div>
         `}
       </div>
 
       <!-- 3. OBJECTIVES -->
       <div class="section">
         <h2>3. Meeting Objectives</h2>
-        ${agendaData?.objectives ? `
-          <div class="content-box">${agendaData.objectives}</div>
+        ${objectives ? `
+          <div class="content-box">${objectives}</div>
         ` : `
           <div class="no-data">No objectives specified</div>
         `}
@@ -320,17 +295,11 @@ function generateMeetingHTML(meeting: any) {
       <!-- 4. KEY DISCUSSION POINTS -->
       <div class="section">
         <h2>4. Key Discussion Points</h2>
-        ${agendaData?.agendaItems && agendaData.agendaItems.length > 0 ? `
-          ${agendaData.agendaItems.map((item: any, index: number) => `
+        ${keyDiscussionPoints && keyDiscussionPoints.length > 0 ? `
+          ${keyDiscussionPoints.map((item: any, index: number) => `
             <div class="item-box">
-              <span class="item-number">${index + 1}. ${item.topic}</span>
+              <span class="item-number">${index + 1}. ${item.topic || 'Untitled'}</span>
               ${item.description ? `<div class="item-content">${item.description}</div>` : ''}
-              ${item.presenter || item.duration ? `
-                <div class="meta-info">
-                  ${item.presenter ? `Presenter: ${item.presenter}` : ''}
-                  ${item.duration ? ` | Duration: ${item.duration} minutes` : ''}
-                </div>
-              ` : ''}
             </div>
           `).join('')}
         ` : `
@@ -341,9 +310,9 @@ function generateMeetingHTML(meeting: any) {
       <!-- 5. DECISIONS TAKEN -->
       <div class="section">
         <h2>5. Decisions Taken</h2>
-        ${minutesData?.decisions && minutesData.decisions.length > 0 ? `
+        ${decisionsTaken && decisionsTaken.length > 0 ? `
           <ul>
-            ${minutesData.decisions.map((decision: string) => `
+            ${decisionsTaken.map((decision: string) => `
               <li>${decision}</li>
             `).join('')}
           </ul>
@@ -355,10 +324,10 @@ function generateMeetingHTML(meeting: any) {
       <!-- 6. ACTION ITEMS -->
       <div class="section">
         <h2>6. Action Items</h2>
-        ${minutesData?.actionItems && minutesData.actionItems.length > 0 ? `
-          ${minutesData.actionItems.map((item: any, index: number) => `
+        ${actionItems && actionItems.length > 0 ? `
+          ${actionItems.map((item: any, index: number) => `
             <div class="item-box">
-              <span class="item-number">${index + 1}. ${item.task}</span>
+              <span class="item-number">${index + 1}. ${item.task || 'Untitled'}</span>
               ${item.assignedTo || item.dueDate ? `
                 <div class="meta-info">
                   ${item.assignedTo ? `Assigned to: ${item.assignedTo}` : ''}
@@ -367,11 +336,6 @@ function generateMeetingHTML(meeting: any) {
               ` : ''}
             </div>
           `).join('')}
-        ` : agendaData?.actionItems && agendaData.actionItems.length > 0 ? `
-          <h3>Pre-Meeting Action Items</h3>
-          <ul>
-            ${agendaData.actionItems.map((item: string) => `<li>${item}</li>`).join('')}
-          </ul>
         ` : `
           <div class="no-data">No action items recorded</div>
         `}
@@ -380,10 +344,9 @@ function generateMeetingHTML(meeting: any) {
       <!-- 7. RISKS IDENTIFIED -->
       <div class="section">
         <h2>7. Risks Identified</h2>
-        ${agendaData?.preparationRequired && agendaData.preparationRequired.length > 0 ? `
-          <h3>Preparation Requirements & Potential Risks</h3>
+        ${risksIdentified && risksIdentified.length > 0 ? `
           <ul>
-            ${agendaData.preparationRequired.map((item: string) => `<li>${item}</li>`).join('')}
+            ${risksIdentified.map((risk: string) => `<li>${risk}</li>`).join('')}
           </ul>
         ` : `
           <div class="no-data">No risks identified</div>
@@ -393,17 +356,11 @@ function generateMeetingHTML(meeting: any) {
       <!-- 8. CONCLUSION -->
       <div class="section">
         <h2>8. Conclusion</h2>
-        ${minutesData?.nextMeeting ? `
-          <div class="content-box">
-            <strong>Next Meeting Scheduled:</strong><br/>
-            ${format(new Date(minutesData.nextMeeting), 'EEEE, MMMM d, yyyy \'at\' h:mm a')}
-          </div>
-        ` : ''}
-        <div class="content-box">
-          This meeting report summarizes the key discussions, decisions, and action items from the ${meeting.title}. 
-          All participants are requested to review their assigned action items and complete them by the specified due dates.
-          ${minutesData?.nextMeeting ? ' Please mark your calendars for the next meeting as scheduled above.' : ''}
-        </div>
+        ${conclusion ? `
+          <div class="content-box">${conclusion}</div>
+        ` : `
+          <div class="no-data">No conclusion provided</div>
+        `}
       </div>
 
       <div class="footer">

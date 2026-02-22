@@ -127,121 +127,118 @@ function generateAgendaHTML(meeting: any) {
     <html>
     <head>
       <style>
+        @page {
+          margin: 2cm;
+        }
         body { 
-          font-family: Arial, sans-serif; 
-          padding: 40px; 
+          font-family: 'Times New Roman', Times, serif; 
+          padding: 0; 
           line-height: 1.6;
-          color: #333;
+          color: #000;
+          font-size: 11pt;
         }
         .header {
           text-align: center;
-          margin-bottom: 40px;
-          padding-bottom: 20px;
-          border-bottom: 3px solid #3b82f6;
+          margin-bottom: 30px;
+          padding-bottom: 15px;
+          border-bottom: 2px solid #000;
         }
         h1 { 
-          color: #1e40af; 
+          color: #000; 
           margin-bottom: 10px;
-          font-size: 32px;
+          font-size: 18pt;
+          font-weight: bold;
+          text-transform: uppercase;
+          letter-spacing: 1px;
         }
         .subtitle {
-          color: #64748b;
-          font-size: 18px;
+          color: #333;
+          font-size: 12pt;
           font-weight: 600;
         }
         h2 { 
-          color: #1e40af; 
-          margin-top: 35px;
+          color: #000; 
+          margin-top: 30px;
           margin-bottom: 15px;
-          border-left: 4px solid #3b82f6;
-          padding-left: 15px;
-          font-size: 24px;
+          border-bottom: 1px solid #000;
+          padding-bottom: 5px;
+          font-size: 14pt;
+          font-weight: bold;
+          text-transform: uppercase;
         }
         h3 {
-          color: #475569;
+          color: #000;
           margin-top: 20px;
           margin-bottom: 10px;
-          font-size: 18px;
+          font-size: 12pt;
+          font-weight: bold;
         }
         .info { 
-          margin: 25px 0;
-          background: #f8fafc;
-          padding: 20px;
-          border-radius: 8px;
-          border: 1px solid #e2e8f0;
+          margin: 20px 0;
+          border: 1px solid #000;
+          padding: 0;
         }
-        .info-grid {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 15px;
+        .info-table {
+          width: 100%;
+          border-collapse: collapse;
         }
-        .info-item { 
-          display: flex;
-          gap: 10px;
+        .info-table td {
+          padding: 8px 12px;
+          border: 1px solid #000;
         }
-        .info-item strong {
-          min-width: 120px;
-          color: #475569;
+        .info-table td:first-child {
+          font-weight: bold;
+          width: 150px;
+          background: #f5f5f5;
         }
         .agenda-section {
-          margin: 30px 0;
+          margin: 25px 0;
         }
         .agenda-item { 
-          margin: 20px 0;
-          padding: 15px;
-          background: #f0f9ff;
-          border-left: 4px solid #3b82f6;
-          border-radius: 4px;
+          margin: 15px 0;
+          padding: 12px;
+          border: 1px solid #000;
+          background: #fafafa;
           page-break-inside: avoid;
         }
         .agenda-item strong {
-          color: #1e40af;
-          font-size: 1.1em;
+          color: #000;
+          font-size: 11pt;
           display: block;
           margin-bottom: 8px;
         }
         .agenda-item p {
-          margin: 8px 0;
-          color: #475569;
+          margin: 8px 0 8px 20px;
+          color: #333;
         }
         .meta-info {
-          color: #64748b;
-          font-size: 0.9em;
+          color: #666;
+          font-size: 9pt;
           margin-top: 8px;
+          font-style: italic;
         }
         ul {
           margin: 10px 0;
-          padding-left: 25px;
+          padding-left: 30px;
         }
         li {
-          margin: 8px 0;
-          color: #475569;
+          margin: 6px 0;
+          color: #000;
         }
         .objectives-box {
-          background: #eff6ff;
-          padding: 20px;
-          border-radius: 8px;
-          border: 2px solid #3b82f6;
-          margin: 20px 0;
+          background: #f9f9f9;
+          padding: 15px;
+          border: 1px solid #000;
+          margin: 15px 0;
           white-space: pre-wrap;
         }
         .footer {
-          margin-top: 50px;
-          padding-top: 20px;
-          border-top: 2px solid #e2e8f0;
-          color: #64748b;
-          font-size: 0.9em;
+          margin-top: 40px;
+          padding-top: 15px;
+          border-top: 1px solid #000;
+          color: #666;
+          font-size: 9pt;
           text-align: center;
-        }
-        .badge {
-          display: inline-block;
-          padding: 4px 12px;
-          background: #dbeafe;
-          color: #1e40af;
-          border-radius: 12px;
-          font-size: 0.85em;
-          font-weight: 600;
-          margin-left: 10px;
         }
       </style>
     </head>
@@ -252,77 +249,77 @@ function generateAgendaHTML(meeting: any) {
       </div>
       
       <div class="info">
-        <div class="info-grid">
-          <div class="info-item">
-            <strong>📅 Date:</strong>
-            <span>${format(new Date(meeting.date), 'PPPP')}</span>
-          </div>
-          <div class="info-item">
-            <strong>🕐 Time:</strong>
-            <span>${format(new Date(meeting.date), 'p')}</span>
-          </div>
-          <div class="info-item">
-            <strong>👤 Organizer:</strong>
-            <span>${meeting.user.name}</span>
-          </div>
-          <div class="info-item">
-            <strong>📍 Mode:</strong>
-            <span style="text-transform: capitalize;">${meeting.meetingMode || 'Offline'}</span>
-          </div>
-        </div>
-        ${meeting.meetingLink ? `
-          <div class="info-item" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e2e8f0;">
-            <strong>🔗 Meeting Link:</strong>
-            <span style="word-break: break-all;">${meeting.meetingLink}</span>
-          </div>
-        ` : ''}
+        <table class="info-table">
+          <tr>
+            <td>Date</td>
+            <td>${format(new Date(meeting.date), 'PPPP')}</td>
+          </tr>
+          <tr>
+            <td>Time</td>
+            <td>${format(new Date(meeting.date), 'p')}</td>
+          </tr>
+          <tr>
+            <td>Organizer</td>
+            <td>${meeting.user.name}</td>
+          </tr>
+          <tr>
+            <td>Mode</td>
+            <td style="text-transform: capitalize;">${meeting.meetingMode || 'Offline'}</td>
+          </tr>
+          ${meeting.meetingLink ? `
+            <tr>
+              <td>Meeting Link</td>
+              <td style="word-break: break-all;">${meeting.meetingLink}</td>
+            </tr>
+          ` : ''}
+        </table>
       </div>
 
       ${agendaData ? `
         <div class="agenda-section">
           ${agendaData.objectives ? `
-            <h2>🎯 Meeting Objectives</h2>
+            <h2>Meeting Objectives</h2>
             <div class="objectives-box">${agendaData.objectives}</div>
           ` : ''}
 
           ${agendaData.preparationRequired && agendaData.preparationRequired.length > 0 ? `
-            <h2>📋 Preparation Required</h2>
+            <h2>Preparation Required</h2>
             <ul>
               ${agendaData.preparationRequired.map((item: string) => `<li>${item}</li>`).join('')}
             </ul>
           ` : ''}
 
           ${agendaData.agendaItems && agendaData.agendaItems.length > 0 ? `
-            <h2>📝 Agenda Items</h2>
+            <h2>Agenda Items</h2>
             ${agendaData.agendaItems.map((item: any, index: number) => `
               <div class="agenda-item">
                 <strong>${index + 1}. ${item.topic}</strong>
                 ${item.description ? `<p>${item.description}</p>` : ''}
                 <div class="meta-info">
-                  ${item.presenter ? `👤 Presenter: ${item.presenter}` : ''}
-                  ${item.duration ? ` | ⏱️ Duration: ${item.duration} minutes` : ''}
+                  ${item.presenter ? `Presenter: ${item.presenter}` : ''}
+                  ${item.duration ? ` | Duration: ${item.duration} minutes` : ''}
                 </div>
               </div>
             `).join('')}
           ` : ''}
 
           ${agendaData.actionItems && agendaData.actionItems.length > 0 ? `
-            <h2>✅ Pre-Meeting Action Items</h2>
+            <h2>Pre-Meeting Action Items</h2>
             <ul>
               ${agendaData.actionItems.map((item: string) => `<li>${item}</li>`).join('')}
             </ul>
           ` : ''}
         </div>
       ` : `
-        <div style="text-align: center; padding: 60px 20px; color: #94a3b8;">
-          <h2 style="color: #64748b;">No Agenda Available</h2>
+        <div style="text-align: center; padding: 40px 20px; color: #666;">
+          <h2 style="color: #333;">No Agenda Available</h2>
           <p>The agenda for this meeting has not been created yet.</p>
         </div>
       `}
 
       <div class="footer">
         <p>Agenda generated on ${format(new Date(), 'PPPp')}</p>
-        <p style="margin-top: 5px; font-size: 0.85em;">Please review the agenda before the meeting and prepare accordingly.</p>
+        <p style="margin-top: 5px;">Please review the agenda before the meeting and prepare accordingly.</p>
       </div>
     </body>
     </html>
