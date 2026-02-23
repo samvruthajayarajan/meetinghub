@@ -16,21 +16,11 @@ export default function SignIn() {
     setError('');
     try {
       const result = await signIn('credentials', { 
-        redirect: false, 
+        redirect: true,
         email: formData.email, 
         password: formData.password,
         callbackUrl: '/user'
       });
-      if (result?.error) { 
-        setError('Invalid email or password'); 
-        setLoading(false); 
-      } else if (result?.ok) { 
-        // Successful login - redirect immediately
-        window.location.href = '/user';
-      } else {
-        setError('An unexpected error occurred');
-        setLoading(false);
-      }
     } catch (err) { 
       setError('An error occurred'); 
       setLoading(false); 
