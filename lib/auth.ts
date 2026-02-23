@@ -17,7 +17,10 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         try {
+          console.log('🔐 Auth attempt for:', credentials?.email);
+          
           if (!credentials?.email || !credentials?.password) {
+            console.log('❌ Missing credentials');
             return null;
           }
 
@@ -26,8 +29,10 @@ export const authOptions: NextAuthOptions = {
           let user;
 
           if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+            console.log('✅ User found in cache');
             user = cached.user;
           } else {
+            console.log('🔍 Fetching user from database...');
             // Fetch from database with minimal fields
             user = await prisma.user.findUnique({
               where: { email: credentials.email },
@@ -41,8 +46,11 @@ export const authOptions: NextAuthOptions = {
             });
 
             if (user) {
+              console.log('✅ User found in database');
               // Cache the user
               userCache.set(credentials.email, { user, timestamp: Date.now() });
+            } else {
+              console.log('❌ User not found in database');
             }
           }
 
@@ -50,16 +58,21 @@ export const authOptions: NextAuthOptions = {
             return null;
           }
           
+          console.log('🔑 Comparing passwords...');
           // Fast password comparison
           const isPasswordValid = await bcrypt.compare(
             credentials.password,
             user.password
           );
 
+          console.log('Password valid:', isPasswordValid);
+
           if (!isPasswordValid) {
+            console.log('❌ Invalid password');
             return null;
           }
 
+          console.log('✅ Authentication successful');
           return {
             id: user.id,
             email: user.email,
@@ -67,7 +80,7 @@ export const authOptions: NextAuthOptions = {
             role: user.role,
           };
         } catch (error) {
-          console.error('Auth error:', error);
+          console.error('❌ Auth error:', error);
           return null;
         }
       }
