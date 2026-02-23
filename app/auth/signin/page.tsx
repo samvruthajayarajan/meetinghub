@@ -92,16 +92,6 @@ export default function SignIn() {
             </button>
           </form>
 
-          <div className="mt-4 text-right">
-            <button
-              type="button"
-              onClick={() => router.push('/auth/forgot-password')}
-              className="text-sm text-green-600 hover:text-green-700 font-medium transition-colors"
-            >
-              Forgot Password?
-            </button>
-          </div>
-
           <div className="mt-6 pt-6 border-t border-gray-200 text-center">
             <p className="text-gray-600 text-sm">
               Don't have an account?{' '}
