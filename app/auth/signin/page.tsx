@@ -38,9 +38,11 @@ export default function SignIn() {
       setLoading(false); 
     } else if (result?.ok) { 
       console.log('Login successful, redirecting...');
-      // Wait for prefetch then navigate
+      // Wait for prefetch then navigate with a small delay to ensure session is set
       await navigationPromise;
-      router.push('/user');
+      setTimeout(() => {
+        window.location.href = '/user'; // Force full page reload to ensure session is loaded
+      }, 100);
     } else {
       console.error('Unexpected result:', result);
       setError('Login failed. Please try again.');
