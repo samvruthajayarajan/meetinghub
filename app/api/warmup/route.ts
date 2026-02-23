@@ -4,8 +4,8 @@ import { prisma } from '@/lib/prisma';
 // This endpoint keeps the serverless function warm
 export async function GET() {
   try {
-    // Quick database ping
-    await prisma.$queryRaw`SELECT 1`;
+    // Quick database ping - just count users
+    await prisma.user.count();
     
     return NextResponse.json({ 
       status: 'warm',
