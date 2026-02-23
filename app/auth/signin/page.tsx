@@ -15,6 +15,14 @@ export default function SignIn() {
     setLoading(true);
     setError('');
     
+    // Optimistic navigation - start loading user page immediately
+    const navigationPromise = new Promise((resolve) => {
+      setTimeout(() => {
+        router.prefetch('/user');
+        resolve(true);
+      }, 0);
+    });
+
     console.log('Attempting login...');
     const result = await signIn('credentials', { 
       redirect: false, 
@@ -30,7 +38,8 @@ export default function SignIn() {
       setLoading(false); 
     } else if (result?.ok) { 
       console.log('Login successful, redirecting...');
-      // Successful login - redirect to dashboard
+      // Wait for prefetch then navigate
+      await navigationPromise;
       router.push('/user');
     } else {
       console.error('Unexpected result:', result);
