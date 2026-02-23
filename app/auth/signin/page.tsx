@@ -14,16 +14,22 @@ export default function SignIn() {
     e.preventDefault();
     setLoading(true);
     setError('');
-    try {
-      const result = await signIn('credentials', { 
-        redirect: true,
-        email: formData.email, 
-        password: formData.password,
-        callbackUrl: '/user'
-      });
-    } catch (err) { 
-      setError('An error occurred'); 
+    
+    const result = await signIn('credentials', { 
+      redirect: false, 
+      email: formData.email, 
+      password: formData.password,
+    });
+
+    if (result?.error) { 
+      setError('Invalid email or password'); 
       setLoading(false); 
+    } else if (result?.ok) { 
+      // Successful login - redirect to dashboard
+      router.push('/user');
+    } else {
+      setError('Login failed. Please try again.');
+      setLoading(false);
     }
   };
 
