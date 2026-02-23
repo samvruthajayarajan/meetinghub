@@ -1,0 +1,21 @@
+CRITICAL: Add these environment variables to Vercel for optimal performance
+
+DATABASE_URL (with connection pooling):
+mongodb+srv://samvruthajayarajan02_db_user:stIFkGXI8b5flOkX@cluster0.9bs2hmj.mongodb.net/meeting_system?retryWrites=true&w=majority&maxPoolSize=10&minPoolSize=2&serverSelectionTimeoutMS=5000&connectTimeoutMS=10000
+
+NEXTAUTH_URL:
+https://your-vercel-url.vercel.app
+
+NEXTAUTH_SECRET:
+Copy from local .env file
+
+GOOGLE_CLIENT_ID:
+Copy from local .env file
+
+GOOGLE_CLIENT_SECRET:
+Copy from local .env file
+
+GOOGLE_REDIRECT_URI:
+https://your-vercel-url.vercel.app/api/auth/gmail/callback
+
+Note: Replace "your-vercel-url" with your actual Vercel deployment URL
