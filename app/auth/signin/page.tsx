@@ -15,19 +15,25 @@ export default function SignIn() {
     setLoading(true);
     setError('');
     
+    console.log('Attempting login...');
     const result = await signIn('credentials', { 
       redirect: false, 
       email: formData.email, 
       password: formData.password,
     });
 
+    console.log('Login result:', result);
+
     if (result?.error) { 
+      console.error('Login error:', result.error);
       setError('Invalid email or password'); 
       setLoading(false); 
     } else if (result?.ok) { 
+      console.log('Login successful, redirecting...');
       // Successful login - redirect to dashboard
       router.push('/user');
     } else {
+      console.error('Unexpected result:', result);
       setError('Login failed. Please try again.');
       setLoading(false);
     }
