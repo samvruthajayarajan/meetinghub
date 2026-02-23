@@ -15,9 +15,23 @@ export default function SignIn() {
     setLoading(true);
     setError('');
     try {
-      const result = await signIn('credentials', { redirect: false, email: formData.email, password: formData.password });
-      if (result?.error) { setError('Invalid email or password'); setLoading(false); } else { router.push('/user'); }
-    } catch (err) { setError('An error occurred'); setLoading(false); }
+      const result = await signIn('credentials', { 
+        redirect: false, 
+        email: formData.email, 
+        password: formData.password,
+        callbackUrl: '/user'
+      });
+      if (result?.error) { 
+        setError('Invalid email or password'); 
+        setLoading(false); 
+      } else { 
+        // Redirect immediately without waiting
+        window.location.href = '/user';
+      }
+    } catch (err) { 
+      setError('An error occurred'); 
+      setLoading(false); 
+    }
   };
 
   return (
