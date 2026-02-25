@@ -72,7 +72,7 @@ export async function POST(
 
   try {
     // Generate PDFs
-    const reportPdf = await generateMinutesPDF(meeting, meeting.minutes?.content || null);
+    const reportPdf = await generateMinutesPDF(meeting, meeting.minutes?.discussions || null);
     const agendaPdf = await generateAgendaPDF(meeting);
 
     // Generate email HTML (simplified since PDFs are attached)

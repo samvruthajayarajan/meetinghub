@@ -32,7 +32,7 @@ export async function GET(
       return NextResponse.json({ error: 'Meeting not found' }, { status: 404 });
     }
 
-    const minutesContent = meeting.minutes?.content || null;
+    const minutesContent = meeting.minutes?.discussions || null;
     const pdfBuffer = await generateMinutesPDF(meeting, minutesContent);
 
     // Create report record in database
