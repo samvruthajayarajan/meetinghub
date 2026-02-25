@@ -5,6 +5,10 @@ import { prisma } from '@/lib/prisma';
 import { getBrowser } from '@/lib/puppeteerConfig';
 import { format } from 'date-fns';
 
+// Increase Vercel function limits for PDF generation
+export const maxDuration = 60; // 60 seconds
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
