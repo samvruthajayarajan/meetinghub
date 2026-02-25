@@ -1,24 +1,33 @@
 import { NextResponse } from 'next/server';
-import PDFDocument from 'pdfkit';
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 
 export async function GET() {
   try {
     console.log('Test PDF endpoint called');
     
-    const doc = new PDFDocument();
-    const chunks: Buffer[] = [];
+    const pdfDoc = await PDFDocument.create();
+    const page = pdfDoc.addPage([595, 842]);
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     
-    doc.on('data', (chunk) => chunks.push(chunk));
-    
-    const pdfPromise = new Promise<Buffer>((resolve) => {
-      doc.on('end', () => resolve(Buffer.concat(chunks)));
+    page.drawText('Test PDF Generation', {
+      x: 50,
+      y: 750,
+      size: 25,
+      font,
+      color: rgb(0, 0, 0),
     });
     
-    doc.fontSize(25).text('Test PDF Generation', 100, 100);
-    doc.fontSize(12).text('This is a test PDF generated with PDFKit', 100, 150);
-    doc.end();
+    page.drawText('This is a test PDF generated with pdf-lib', {
+      x: 50,
+      y: 700,
+      size: 12,
+      font,
+      color: rgb(0, 0, 0),
+    });
     
-    const pdfBuffer = await pdfPromise;
+    const pdfBytes = await pdfDoc.save();
+    const pdfBuffer = Buffer.from(pdfBytes);
+    
     console.log('PDF generated successfully');
     
     return new NextResponse(pdfBuffer as any, {
