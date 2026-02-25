@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { sendEmailViaGmail, checkGmailConnection } from '@/lib/gmailApi';
 import nodemailer from 'nodemailer';
-import { getBrowser } from '@/lib/puppeteerConfig';
+import { generateMinutesPDF, generateAgendaPDF } from '@/lib/pdfGenerator';
 import { format } from 'date-fns';
 
 export async function POST(
@@ -72,23 +72,8 @@ export async function POST(
 
   try {
     // Generate PDFs
-    const browser = await getBrowser();
-    
-    // Generate Meeting Report PDF
-    const reportPage = await browser.newPage();
-    const reportHtml = generateMeetingReportHTML(meeting);
-    await reportPage.setContent(reportHtml);
-    const reportPdf = await reportPage.pdf({ format: 'A4', printBackground: true });
-    await reportPage.close();
-    
-    // Generate Agenda PDF
-    const agendaPage = await browser.newPage();
-    const agendaHtml = generateAgendaPDF(meeting, agendaData);
-    await agendaPage.setContent(agendaHtml);
-    const agendaPdf = await agendaPage.pdf({ format: 'A4', printBackground: true });
-    await agendaPage.close();
-    
-    await browser.close();
+    const reportPdf = await generateMinutesPDF(meeting, meeting.minutes?.content || null);
+    const agendaPdf = await generateAgendaPDF(meeting);
 
     // Generate email HTML (simplified since PDFs are attached)
     const emailHtml = `

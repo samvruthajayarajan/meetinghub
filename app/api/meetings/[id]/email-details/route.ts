@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { sendEmailViaGmail, checkGmailConnection } from '@/lib/gmailApi';
 import nodemailer from 'nodemailer';
-import { getBrowser } from '@/lib/puppeteerConfig';
+import { generateAgendaPDF } from '@/lib/pdfGenerator';
 import { format } from 'date-fns';
 
 export async function POST(
@@ -72,13 +72,7 @@ export async function POST(
     }
 
     // Generate Agenda PDF
-    const browser = await getBrowser();
-    const agendaPage = await browser.newPage();
-    const agendaHtml = generateAgendaPDF(meeting, agendaData);
-    await agendaPage.setContent(agendaHtml);
-    const agendaPdf = await agendaPage.pdf({ format: 'A4', printBackground: true });
-    await agendaPage.close();
-    await browser.close();
+    const agendaPdf = await generateAgendaPDF(meeting);
 
     // Generate email HTML - ONLY meeting details, NO agenda
     const emailHtml = `

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { getBrowser } from '@/lib/puppeteerConfig';
+import { generateMinutesPDF, generatePDFFromHTML } from '@/lib/pdfGenerator';
 import { format } from 'date-fns';
 import { writeFile } from 'fs/promises';
 import { join } from 'path';
@@ -39,11 +39,7 @@ export async function POST(
   try {
     // Generate Report PDF
     const html = generateCustomReportHTML(meeting, reportData);
-    const browser = await getBrowser();
-    const page = await browser.newPage();
-    await page.setContent(html);
-    const pdfBuffer = await page.pdf({ format: 'a4', printBackground: true });
-    await browser.close();
+    const pdfBuffer = await generatePDFFromHTML(html);
 
     // Save PDF temporarily in public folder
     const timestamp = Date.now();

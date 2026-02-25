@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { getBrowser } from '@/lib/puppeteerConfig';
+import { generateMinutesPDF, generatePDFFromHTML } from '@/lib/pdfGenerator';
 import { format } from 'date-fns';
 
 export async function POST(
@@ -32,11 +32,7 @@ export async function POST(
 
     const html = generateCustomReportHTML(meeting, reportData);
 
-    const browser = await getBrowser();
-    const page = await browser.newPage();
-    await page.setContent(html);
-    const pdf = await page.pdf({ format: 'a4', printBackground: true });
-    await browser.close();
+    const pdf = await generatePDFFromHTML(html);
 
     // Create report record in database
     const reportCount = await prisma.report.count({ where: { meetingId: id } });

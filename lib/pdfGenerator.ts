@@ -226,3 +226,40 @@ export function generateMinutesPDF(meeting: any, minutes: any): Promise<Buffer> 
     }
   });
 }
+
+
+// Generic HTML to PDF converter (simplified - for basic HTML only)
+// For complex HTML, consider using an external service
+export function generatePDFFromHTML(html: string): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({ 
+        size: 'A4', 
+        margins: { top: 50, bottom: 50, left: 50, right: 50 }
+      });
+      
+      const chunks: Buffer[] = [];
+      
+      doc.on('data', (chunk) => chunks.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
+
+      // Strip HTML tags and render as plain text
+      // This is a simplified version - for complex HTML, use a proper HTML parser
+      const text = html
+        .replace(/<style[^>]*>.*?<\/style>/gis, '')
+        .replace(/<script[^>]*>.*?<\/script>/gis, '')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      doc.fontSize(11).font('Helvetica').text(text, {
+        align: 'justify'
+      });
+
+      doc.end();
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
