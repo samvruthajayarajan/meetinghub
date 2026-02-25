@@ -247,8 +247,8 @@ export function generatePDFFromHTML(html: string): Promise<Buffer> {
       // Strip HTML tags and render as plain text
       // This is a simplified version - for complex HTML, use a proper HTML parser
       const text = html
-        .replace(/<style[^>]*>.*?<\/style>/gis, '')
-        .replace(/<script[^>]*>.*?<\/script>/gis, '')
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
         .replace(/<[^>]+>/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
