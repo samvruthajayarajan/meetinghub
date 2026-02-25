@@ -1,6 +1,6 @@
 # Google OAuth Setup Guide for Gmail Integration
 
-## Complete Step-by-Step Configuration
+## Complete Step-by-Step Configuration (100% FREE)
 
 ### Part 1: Create Google Cloud Project & OAuth Credentials
 
@@ -43,14 +43,18 @@
 3. Click "UPDATE"
 4. Click "SAVE AND CONTINUE"
 
-#### Step 5: Add Test Users
-1. Click "+ ADD USERS"
-2. Enter the email address you use to login to MeetingHub
-3. Click "ADD"
-4. Click "SAVE AND CONTINUE"
-5. Review the summary and click "BACK TO DASHBOARD"
+#### Step 5: Skip Test Users (We'll publish instead)
+1. Click "SAVE AND CONTINUE" (don't add test users)
+2. Review the summary and click "BACK TO DASHBOARD"
 
-#### Step 6: Create OAuth Credentials
+#### Step 6: PUBLISH THE APP (FREE - IMPORTANT!)
+1. On the OAuth consent screen page, you'll see "Publishing status: Testing"
+2. Click the "PUBLISH APP" button
+3. A popup will appear - Click "CONFIRM"
+4. Status will change to "In production"
+5. **Done! Now ANY user can connect their Gmail (unlimited users)**
+
+#### Step 7: Create OAuth Credentials
 1. Go to "APIs & Services" → "Credentials"
 2. Click "+ CREATE CREDENTIALS" at the top
 3. Select "OAuth client ID"
@@ -72,7 +76,7 @@
 
 ### Part 2: Configure Your Application
 
-#### Step 7: Update Local Environment Variables
+#### Step 8: Update Local Environment Variables
 
 Edit your `.env` file:
 
@@ -82,7 +86,7 @@ GOOGLE_CLIENT_SECRET="your-client-secret-here"
 GOOGLE_REDIRECT_URI="http://localhost:3000/api/auth/gmail/callback"
 ```
 
-#### Step 8: Update Vercel Environment Variables
+#### Step 9: Update Vercel Environment Variables
 
 1. Go to [Vercel Dashboard](https://vercel.com/dashboard)
 2. Select your project
@@ -104,17 +108,19 @@ GOOGLE_REDIRECT_URI="http://localhost:3000/api/auth/gmail/callback"
 
 ### Part 3: Testing
 
-#### Step 9: Test Gmail Authorization
+#### Step 10: Test Gmail Authorization
 
 1. Go to your deployed app: `https://meetinghub-git-main-samvrutha-jayarajans-projects.vercel.app`
 2. Login to your account
 3. Look for "Connect Gmail" or Gmail authorization button
 4. Click it
-5. You should see Google's consent screen
-6. Click "Continue" (you may see a warning that the app is unverified - this is normal)
-7. Click "Advanced" → "Go to MeetingHub (unsafe)"
-8. Grant permissions
+5. You'll see Google's warning screen: "Google hasn't verified this app"
+6. **This is normal!** Click "Advanced" (bottom left)
+7. Click "Go to MeetingHub (unsafe)"
+8. Click "Continue" to grant permissions
 9. You should be redirected back to your app with success message
+
+**Note:** Every user will see this warning screen. It's safe - they just need to click "Advanced" → "Go to MeetingHub (unsafe)" → "Continue"
 
 ---
 
@@ -124,19 +130,19 @@ GOOGLE_REDIRECT_URI="http://localhost:3000/api/auth/gmail/callback"
 - **Cause**: Redirect URI mismatch
 - **Fix**: Make sure the redirect URI in your code exactly matches what's in Google Cloud Console
 
-### Error 403: access_denied
-- **Cause**: Email not added as test user
-- **Fix**: Add your email to test users in OAuth consent screen (Step 5)
+### Error 403: access_denied  
+- **Cause**: App is still in "Testing" mode
+- **Fix**: Click "PUBLISH APP" in OAuth consent screen (Step 6)
 
 ### Error: redirect_uri_mismatch
 - **Cause**: The redirect URI doesn't match
 - **Fix**: Check that `NEXTAUTH_URL` in Vercel matches your deployment URL exactly (no trailing slash)
 
-### Still in Testing Mode?
-- Your app will stay in "Testing" mode until you submit for verification
-- In testing mode, only test users can authorize
-- To add more users, go to OAuth consent screen → Test users → Add users
-- For production use, you need to submit for Google verification (takes 1-2 weeks)
+### Users see "This app isn't verified" warning
+- **This is normal!** Your app is published but not verified
+- Users can still connect by clicking: "Advanced" → "Go to MeetingHub (unsafe)" → "Continue"
+- To remove this warning, you need Google verification (costs $15-$75 and takes 1-2 weeks)
+- Most apps run fine with this warning - users just need to click through it
 
 ---
 
@@ -146,7 +152,7 @@ GOOGLE_REDIRECT_URI="http://localhost:3000/api/auth/gmail/callback"
 - [ ] Gmail API enabled
 - [ ] OAuth consent screen configured (External)
 - [ ] Scopes added (gmail.send, userinfo.email)
-- [ ] Test user email added
+- [ ] **APP PUBLISHED** (Click "PUBLISH APP" button - FREE!)
 - [ ] OAuth credentials created
 - [ ] Redirect URIs added (both localhost and production)
 - [ ] `GOOGLE_CLIENT_ID` set in Vercel
@@ -159,10 +165,11 @@ GOOGLE_REDIRECT_URI="http://localhost:3000/api/auth/gmail/callback"
 
 ## Important Notes
 
-1. **Test Users Limit**: You can add up to 100 test users while in testing mode
-2. **Token Expiry**: Access tokens expire after 1 hour, but refresh tokens are used to get new ones automatically
-3. **Verification**: For public use (not just test users), submit your app for Google verification
-4. **Scopes**: Only request the minimum scopes you need (gmail.send for sending emails)
+1. **Publishing is FREE**: Clicking "PUBLISH APP" costs nothing and allows unlimited users
+2. **Unverified Warning**: Users will see a warning screen but can easily bypass it (2 clicks)
+3. **Token Expiry**: Access tokens expire after 1 hour, but refresh tokens are used to get new ones automatically
+4. **Verification (Optional)**: To remove the warning screen, submit for Google verification (costs $15-$75, takes 1-2 weeks)
+5. **Scopes**: Only request the minimum scopes you need (gmail.send for sending emails)
 
 ---
 

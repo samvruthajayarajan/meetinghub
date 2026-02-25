@@ -24,6 +24,9 @@ export async function GET(
     const meeting = await prisma.meeting.findUnique({
       where: { id },
       include: {
+        agendaItems: {
+          orderBy: { order: 'asc' }
+        },
         user: { select: { name: true, email: true } }
       }
     });
