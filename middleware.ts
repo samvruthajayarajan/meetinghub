@@ -46,6 +46,6 @@ export const config = {
     '/meetings/:path*',
     '/auth/signin',
     '/auth/register',
-    '/((?!api|_next/static|_next/image|favicon.ico|manifest.json).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|manifest.json|.*\\.svg|.*\\.png|.*\\.jpg|.*\\.ico).*)',
   ],
 };
