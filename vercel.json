@@ -1,0 +1,12 @@
+{
+  "functions": {
+    "app/api/meetings/[id]/agenda-pdf/route.ts": {
+      "memory": 3008,
+      "maxDuration": 60
+    },
+    "app/api/meetings/[id]/pdf/route.ts": {
+      "memory": 3008,
+      "maxDuration": 60
+    }
+  }
+}

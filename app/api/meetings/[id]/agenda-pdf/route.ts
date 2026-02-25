@@ -42,12 +42,37 @@ export async function GET(
     const html = generateAgendaHTML(meeting);
 
     console.log('Launching puppeteer...');
-    const browser = await getBrowser();
-    const page = await browser.newPage();
-    await page.setContent(html);
-    const pdf = await page.pdf({ format: 'A4', printBackground: true });
-    await browser.close();
-    console.log('PDF generated successfully');
+    let browser;
+    try {
+      browser = await getBrowser();
+      console.log('Browser launched successfully');
+      
+      const page = await browser.newPage();
+      console.log('New page created');
+      
+      await page.setContent(html, { waitUntil: 'networkidle0', timeout: 30000 });
+      console.log('HTML content set');
+      
+      const pdf = await page.pdf({ 
+        format: 'A4', 
+        printBackground: true,
+        timeout: 30000
+      });
+      console.log('PDF generated successfully, size:', pdf.length, 'bytes');
+      
+      await browser.close();
+      console.log('Browser closed');
+    } catch (browserError) {
+      console.error('Browser error:', browserError);
+      if (browser) {
+        try {
+          await browser.close();
+        } catch (closeError) {
+          console.error('Error closing browser:', closeError);
+        }
+      }
+      throw browserError;
+    }
 
     // Save to reports automatically
     try {
