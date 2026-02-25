@@ -67,12 +67,16 @@ export async function GET(
     });
   } catch (error) {
     console.error('Error in agenda PDF generation:', error);
+    console.error('Error name:', error instanceof Error ? error.name : 'Unknown');
+    console.error('Error message:', error instanceof Error ? error.message : 'Unknown');
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack');
     
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     
     return NextResponse.json({
       error: 'Failed to generate agenda PDF',
-      details: errorMessage
+      details: errorMessage,
+      errorType: error instanceof Error ? error.name : 'Unknown'
     }, { status: 500 });
   }
 }
