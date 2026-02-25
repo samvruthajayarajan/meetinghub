@@ -2,11 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { getBrowser } from '@/lib/puppeteerConfig';
 import { format } from 'date-fns';
+import { jsPDF } from 'jspdf';
 
-// Increase Vercel function limits for PDF generation
-export const maxDuration = 60; // 60 seconds
 export const dynamic = 'force-dynamic';
 
 export async function GET(
@@ -36,43 +34,23 @@ export async function GET(
       return NextResponse.json({ error: 'Meeting not found' }, { status: 404 });
     }
 
-    console.log('Meeting found, generating HTML...');
-    console.log('Using Buffer.from for PDF conversion');
+    console.log('Meeting found, generating PDF...');
 
-    const html = generateAgendaHTML(meeting);
-
-    console.log('Launching puppeteer...');
-    let browser;
-    try {
-      browser = await getBrowser();
-      console.log('Browser launched successfully');
-      
-      const page = await browser.newPage();
-      console.log('New page created');
-      
-      await page.setContent(html, { waitUntil: 'networkidle0', timeout: 30000 });
-      console.log('HTML content set');
-      
-      const pdf = await page.pdf({ 
-        format: 'A4', 
-        printBackground: true,
-        timeout: 30000
-      });
-      console.log('PDF generated successfully, size:', pdf.length, 'bytes');
-      
-      await browser.close();
-      console.log('Browser closed');
-    } catch (browserError) {
-      console.error('Browser error:', browserError);
-      if (browser) {
-        try {
-          await browser.close();
-        } catch (closeError) {
-          console.error('Error closing browser:', closeError);
+    // Parse agenda data
+    let agendaData: any = null;
+    if (meeting.agendaData) {
+      try {
+        const parsed = JSON.parse(meeting.agendaData);
+        if (parsed.savedAgendas && parsed.savedAgendas.length > 0) {
+          agendaData = parsed.savedAgendas[parsed.savedAgendas.length - 1];
         }
+      } catch (e) {
+        console.error('Error parsing agendaData:', e);
       }
-      throw browserError;
     }
+
+    // Generate PDF using jsPDF
+    const pdf = generateAgendaPDF(meeting, agendaData);
 
     // Save to reports automatically
     try {
