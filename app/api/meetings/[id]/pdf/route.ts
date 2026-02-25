@@ -45,7 +45,7 @@ export async function GET(
       }
     });
 
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(pdfBuffer as any, {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="minutes-${meeting.title.replace(/[^a-zA-Z0-9-_]/g, '-')}.pdf"`

@@ -59,7 +59,7 @@ export async function GET(
       console.error('Error saving to reports:', reportError);
     }
 
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(pdfBuffer as any, {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="agenda-${meeting.title.replace(/[^a-zA-Z0-9-_]/g, '-')}.pdf"`

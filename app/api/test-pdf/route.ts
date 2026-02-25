@@ -1,23 +1,27 @@
 import { NextResponse } from 'next/server';
+import PDFDocument from 'pdfkit';
 
 export async function GET() {
   try {
     console.log('Test PDF endpoint called');
     
-    // Test if puppeteer is available
-    const puppeteer = await import('puppeteer');
-    console.log('Puppeteer imported successfully');
+    const doc = new PDFDocument();
+    const chunks: Buffer[] = [];
     
-    const browser = await puppeteer.launch({ headless: true });
-    console.log('Browser launched');
+    doc.on('data', (chunk) => chunks.push(chunk));
     
-    const page = await browser.newPage();
-    await page.setContent('<html><body><h1>Test PDF</h1></body></html>');
-    const pdf = await page.pdf({ format: 'A4' });
-    await browser.close();
+    const pdfPromise = new Promise<Buffer>((resolve) => {
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+    });
+    
+    doc.fontSize(25).text('Test PDF Generation', 100, 100);
+    doc.fontSize(12).text('This is a test PDF generated with PDFKit', 100, 150);
+    doc.end();
+    
+    const pdfBuffer = await pdfPromise;
     console.log('PDF generated successfully');
     
-    return new NextResponse(Buffer.from(pdf), {
+    return new NextResponse(pdfBuffer as any, {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': 'attachment; filename="test.pdf"'
@@ -25,12 +29,9 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Test PDF error:', error);
-    console.error('Error details:', error instanceof Error ? error.message : 'Unknown');
-    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack');
     return NextResponse.json({ 
       error: 'Test failed', 
-      details: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : 'No stack'
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 }
