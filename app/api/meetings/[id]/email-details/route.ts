@@ -195,7 +195,7 @@ export async function POST(
 
 
 // Helper function to generate Agenda PDF HTML
-function generateAgendaPDF(meeting: any, agendaData: any) {
+function generateAgendaPDFHTML(meeting: any, agendaData: any) {
   return `
     <!DOCTYPE html>
     <html>
