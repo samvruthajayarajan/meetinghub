@@ -59,7 +59,6 @@ export async function POST(
           [{
             filename: `meeting-details-${meeting.title.replace(/[^a-zA-Z0-9-_]/g, '-')}.pdf`,
             content: pdfBuffer,
-            contentType: 'application/pdf',
           }]
         )
       )

@@ -179,10 +179,10 @@ export default function CreateMeeting() {
               </div>
             </div>
 
-            {/* Organizer */}
+            {/* Presenter */}
             <div>
               <label htmlFor="organizer" className="block text-sm font-semibold text-green-800 mb-2">
-                Organizer
+                Presenter
               </label>
               <input
                 type="text"
@@ -191,7 +191,7 @@ export default function CreateMeeting() {
                 value={formData.organizer}
                 onChange={handleChange}
                 className="w-full px-4 py-3 bg-white border border-green-300 rounded-xl text-green-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all shadow-sm"
-                placeholder="Enter organizer name"
+                placeholder="Enter presenter name"
               />
             </div>
 

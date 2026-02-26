@@ -210,10 +210,10 @@ export default function EditMeeting({ params }: { params: Promise<{ id: string }
               </div>
             </div>
 
-            {/* Organizer */}
+            {/* Presenter */}
             <div>
               <label htmlFor="organizer" className="block text-sm font-semibold text-gray-700 mb-2">
-                Organizer
+                Presenter
               </label>
               <input
                 type="text"
@@ -222,7 +222,7 @@ export default function EditMeeting({ params }: { params: Promise<{ id: string }
                 value={formData.organizer}
                 onChange={handleChange}
                 className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-                placeholder="Enter organizer name"
+                placeholder="Enter presenter name"
               />
             </div>
 
