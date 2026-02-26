@@ -514,15 +514,6 @@ export default function UserDashboard() {
                   
                   <div className="space-y-2">
                     <button
-                      onClick={() => router.push(`/meetings/${meeting.id}/agenda`)}
-                      className="w-full px-4 py-2 bg-green-100 text-green-700 rounded-xl hover:bg-green-200 transition-colors text-sm font-medium flex items-center justify-center gap-2"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      View Agenda
-                    </button>
-                    <button
                       onClick={() => router.push(`/meetings/${meeting.id}/view-minutes-new`)}
                       className="w-full px-4 py-2 bg-yellow-100 text-yellow-700 rounded-xl hover:bg-yellow-200 transition-colors text-sm font-medium flex items-center justify-center gap-2"
                     >
