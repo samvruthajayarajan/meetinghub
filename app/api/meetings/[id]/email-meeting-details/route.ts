@@ -30,23 +30,6 @@ export async function POST(
       return NextResponse.json({ error: 'Meeting not found' }, { status: 404 });
     }
 
-    // Get user with Gmail tokens
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select: {
-        gmailAccessToken: true,
-        gmailRefreshToken: true,
-        gmailTokenExpiry: true,
-      },
-    });
-
-    if (!user?.gmailRefreshToken) {
-      return NextResponse.json(
-        { error: 'Gmail not connected', needsGmailAuth: true },
-        { status: 400 }
-      );
-    }
-
     // Generate PDF
     const pdfBuffer = await generateMeetingDetailsPDF(meeting);
 
@@ -69,17 +52,14 @@ export async function POST(
     const results = await Promise.allSettled(
       recipients.map((recipient) =>
         sendEmailViaGmail(
-          user.gmailAccessToken!,
-          user.gmailRefreshToken!,
-          user.gmailTokenExpiry,
           session.user.email!,
-          recipient,
+          [recipient],
           subject,
-          body,
+          body.replace(/\n/g, '<br>'),
           [{
             filename: `meeting-details-${meeting.title.replace(/[^a-zA-Z0-9-_]/g, '-')}.pdf`,
-            content: pdfBuffer.toString('base64'),
-            encoding: 'base64',
+            content: pdfBuffer,
+            contentType: 'application/pdf',
           }]
         )
       )
