@@ -54,7 +54,6 @@ export default function MinutesPage({ params }: { params: Promise<{ id: string }
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
   const [emailRecipients, setEmailRecipients] = useState('');
   const [whatsappNumbers, setWhatsappNumbers] = useState('');
-  const [whatsappNumbers, setWhatsappNumbers] = useState('');
 
   useEffect(() => {
     if (status === 'unauthenticated') {
