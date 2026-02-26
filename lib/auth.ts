@@ -115,7 +115,7 @@ export const authOptions: NextAuthOptions = {
                 email: user.email!,
                 name: user.name || user.email!.split('@')[0],
                 password: '', // No password for OAuth users
-                role: 'user',
+                role: 'USER',
                 gmailAccessToken: account.access_token,
                 gmailRefreshToken: account.refresh_token,
                 gmailTokenExpiry: account.expires_at ? new Date(account.expires_at * 1000) : null,
