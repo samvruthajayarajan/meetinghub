@@ -32,7 +32,7 @@ export async function POST(
 
     const html = generateCustomReportHTML(meeting, reportData);
 
-    const pdf = await generatePDFFromHTML(html);
+    const pdf = await generatePDFFromHTML(html, `Meeting Report: ${meeting.title}`);
 
     // Create report record in database
     const reportCount = await prisma.report.count({ where: { meetingId: id } });
