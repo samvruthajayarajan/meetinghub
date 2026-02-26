@@ -99,8 +99,7 @@ export async function generateAgendaPDF(meeting: any, agendaData: any): Promise<
     yPosition -= lineHeight;
     agendaData.preparationRequired.forEach((item: string, index: number) => {
       checkAndAddPage(lineHeight);
-     const itemLines = wrapText(`${index + 1}. ${item}`, pageWidth - leftMargin - 60, 12, font);
-
+      const itemLines = wrapText(`${index + 1}. ${item}`, pageWidth - leftMargin - 60, 12, font);
       for (const line of itemLines) {
         checkAndAddPage(lineHeight);
         page.drawText(line, { x: leftMargin + 10, y: yPosition, size: 12, font: font, color: rgb(0, 0, 0) });
