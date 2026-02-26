@@ -59,7 +59,7 @@ export async function POST(
 
   try {
     // Parse agenda data
-    let agendaData: any = null;
+    let agendaData = { objectives: '', preparationRequired: [], agendaItems: [], actionItems: [] };
     if (meeting.description) {
       try {
         const parsed = JSON.parse(meeting.description);
@@ -72,15 +72,6 @@ export async function POST(
     }
 
     // Generate Agenda PDF
-    let agendaData = { objectives: '', preparationRequired: [], agendaItems: [], actionItems: [] };
-    if (meeting.description) {
-      try {
-        const parsed = JSON.parse(meeting.description);
-        if (parsed.savedAgendas && parsed.savedAgendas.length > 0) {
-          agendaData = parsed.savedAgendas[parsed.savedAgendas.length - 1];
-        }
-      } catch (e) {}
-    }
     const agendaPdf = await generateAgendaPDF(meeting, agendaData);
 
     // Generate email HTML - ONLY meeting details, NO agenda
