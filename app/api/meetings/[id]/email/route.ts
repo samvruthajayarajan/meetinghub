@@ -73,7 +73,16 @@ export async function POST(
   try {
     // Generate PDFs
     const reportPdf = await generateMinutesPDF(meeting, meeting.minutes?.discussions || null);
-    const agendaPdf = await generateAgendaPDF(meeting);
+    let agendaData = { objectives: '', preparationRequired: [], agendaItems: [], actionItems: [] };
+    if (meeting.description) {
+      try {
+        const parsed = JSON.parse(meeting.description);
+        if (parsed.savedAgendas && parsed.savedAgendas.length > 0) {
+          agendaData = parsed.savedAgendas[parsed.savedAgendas.length - 1];
+        }
+      } catch (e) {}
+    }
+    const agendaPdf = await generateAgendaPDF(meeting, agendaData);
 
     // Generate email HTML (simplified since PDFs are attached)
     const emailHtml = `

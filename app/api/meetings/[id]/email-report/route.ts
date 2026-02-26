@@ -58,7 +58,7 @@ export async function POST(
   try {
     // Generate Report PDF
     const html = generateCustomReportHTML(meeting, reportData);
-    const pdfBuffer = await generatePDFFromHTML(html);
+    const pdfBuffer = await generatePDFFromHTML(html, `Meeting Report: ${meeting.title}`);
 
     // Generate email HTML
     const emailHtml = `

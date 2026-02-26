@@ -39,7 +39,7 @@ export async function POST(
   try {
     // Generate Report PDF
     const html = generateCustomReportHTML(meeting, reportData);
-    const pdfBuffer = await generatePDFFromHTML(html);
+    const pdfBuffer = await generatePDFFromHTML(html, `Meeting Report: ${meeting.title}`);
 
     // Save PDF temporarily in public folder
     const timestamp = Date.now();
