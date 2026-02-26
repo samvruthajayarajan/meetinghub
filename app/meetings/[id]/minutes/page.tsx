@@ -54,10 +54,6 @@ export default function MinutesPage({ params }: { params: Promise<{ id: string }
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
   const [emailRecipients, setEmailRecipients] = useState('');
   const [whatsappNumbers, setWhatsappNumbers] = useState('');
-  const [sending, setSending] = useState(false);
-  const [showEmailModal, setShowEmailModal] = useState(false);
-  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
-  const [emailRecipients, setEmailRecipients] = useState('');
   const [whatsappNumbers, setWhatsappNumbers] = useState('');
 
   useEffect(() => {
