@@ -13,6 +13,13 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      authorization: {
+        params: {
+          access_type: 'offline',
+          prompt: 'consent',
+          scope: 'openid email profile https://www.googleapis.com/auth/gmail.send'
+        }
+      }
     }),
     CredentialsProvider({
       name: 'Credentials',
@@ -102,25 +109,38 @@ export const authOptions: NextAuthOptions = {
           });
 
           if (!existingUser) {
-            // Create new user
+            // Create new user with Gmail tokens
             await prisma.user.create({
               data: {
                 email: user.email!,
                 name: user.name || user.email!.split('@')[0],
                 password: '', // No password for OAuth users
                 role: 'user',
+                gmailAccessToken: account.access_token,
+                gmailRefreshToken: account.refresh_token,
+                gmailTokenExpiry: account.expires_at ? new Date(account.expires_at * 1000) : null,
+              }
+            });
+          } else {
+            // Update existing user with Gmail tokens
+            await prisma.user.update({
+              where: { email: user.email! },
+              data: {
+                gmailAccessToken: account.access_token,
+                gmailRefreshToken: account.refresh_token,
+                gmailTokenExpiry: account.expires_at ? new Date(account.expires_at * 1000) : null,
               }
             });
           }
           return true;
         } catch (error) {
-          console.error('Error creating user:', error);
+          console.error('Error creating/updating user:', error);
           return false;
         }
       }
       return true;
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
       if (user) {
         token.role = user.role;
         token.id = user.id;
