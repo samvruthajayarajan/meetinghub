@@ -44,8 +44,8 @@ export const config = {
     '/user/:path*',
     '/dashboard/:path*',
     '/meetings/:path*',
+    '/agenda/:path*',
     '/auth/signin',
     '/auth/register',
-    '/((?!api|_next/static|_next/image|favicon.ico|manifest.json|.*\\.svg|.*\\.png|.*\\.jpg|.*\\.ico).*)',
   ],
 };
