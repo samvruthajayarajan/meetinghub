@@ -66,6 +66,8 @@
 - `https://meetinghub-git-main-samvrutha-jayarajans-projects.vercel.app`
 
 **Authorized redirect URIs:**
+- `http://localhost:3000/api/auth/callback/google`
+- `https://meetinghub-git-main-samvrutha-jayarajans-projects.vercel.app/api/auth/callback/google`
 - `http://localhost:3000/api/auth/gmail/callback`
 - `https://meetinghub-git-main-samvrutha-jayarajans-projects.vercel.app/api/auth/gmail/callback`
 

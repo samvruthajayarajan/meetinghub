@@ -1,5 +1,6 @@
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import GoogleProvider from 'next-auth/providers/google';
 import bcrypt from 'bcryptjs';
 import { prisma } from './prisma';
 
@@ -9,6 +10,10 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 export const authOptions: NextAuthOptions = {
   providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    }),
     CredentialsProvider({
       name: 'Credentials',
       credentials: {
@@ -87,6 +92,34 @@ export const authOptions: NextAuthOptions = {
     })
   ],
   callbacks: {
+    async signIn({ user, account, profile }) {
+      // Handle Google OAuth sign in
+      if (account?.provider === 'google') {
+        try {
+          // Check if user exists
+          const existingUser = await prisma.user.findUnique({
+            where: { email: user.email! }
+          });
+
+          if (!existingUser) {
+            // Create new user
+            await prisma.user.create({
+              data: {
+                email: user.email!,
+                name: user.name || user.email!.split('@')[0],
+                password: '', // No password for OAuth users
+                role: 'user',
+              }
+            });
+          }
+          return true;
+        } catch (error) {
+          console.error('Error creating user:', error);
+          return false;
+        }
+      }
+      return true;
+    },
     async jwt({ token, user }) {
       if (user) {
         token.role = user.role;
