@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { sendEmailWithGmail } from '@/lib/gmailApi';
+import { sendEmailViaGmail } from '@/lib/gmailApi';
 import { generateMeetingDetailsPDF } from '@/lib/pdfGenerator';
 
 export async function POST(
@@ -68,7 +68,7 @@ export async function POST(
     // Send email to each recipient
     const results = await Promise.allSettled(
       recipients.map((recipient) =>
-        sendEmailWithGmail(
+        sendEmailViaGmail(
           user.gmailAccessToken!,
           user.gmailRefreshToken!,
           user.gmailTokenExpiry,
