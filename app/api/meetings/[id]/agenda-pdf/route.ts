@@ -36,7 +36,21 @@ export async function GET(
     }
 
     console.log('Generating PDF with PDFKit...');
-    const pdfBuffer = await generateAgendaPDF(meeting);
+    
+    // Parse agenda data from description
+    let agendaData = { objectives: '', preparationRequired: [], agendaItems: [], actionItems: [] };
+    if (meeting.description) {
+      try {
+        const parsed = JSON.parse(meeting.description);
+        if (parsed.savedAgendas && parsed.savedAgendas.length > 0) {
+          agendaData = parsed.savedAgendas[parsed.savedAgendas.length - 1];
+        }
+      } catch (e) {
+        console.log('No agenda data found in description');
+      }
+    }
+    
+    const pdfBuffer = await generateAgendaPDF(meeting, agendaData);
     console.log('PDF generated successfully, size:', pdfBuffer.length, 'bytes');
 
     // Save to reports automatically
