@@ -34,14 +34,19 @@ export async function POST(
     console.log('Generating PDF for meeting:', meeting.title);
     const pdf = await generateReportPDF(meeting, reportData);
 
-    // Create report record in database
-    const reportCount = await prisma.report.count({ where: { meetingId: id } });
-    await prisma.report.create({
-      data: {
-        meetingId: id,
-        version: reportCount + 1
-      }
-    });
+    // Only create report record if this is a new report (not a download from history)
+    // Check if request has a special header to skip report creation
+    const skipReportCreation = req.headers.get('x-skip-report-creation') === 'true';
+    
+    if (!skipReportCreation) {
+      const reportCount = await prisma.report.count({ where: { meetingId: id } });
+      await prisma.report.create({
+        data: {
+          meetingId: id,
+          version: reportCount + 1
+        }
+      });
+    }
 
     return new NextResponse(Buffer.from(pdf), {
       headers: {

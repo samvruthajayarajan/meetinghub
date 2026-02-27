@@ -797,7 +797,41 @@ export default function ReportsPage({ params }: { params: Promise<{ id: string }
                           <button
                             onClick={async () => {
                               try {
-                                const response = await fetch(`/api/meetings/${resolvedParams.id}/pdf`);
+                                // Reconstruct report data from agenda and minutes
+                                const reportDataToSend: any = {
+                                  executiveSummary: '',
+                                  objectives: '',
+                                  keyDiscussionPoints: [],
+                                  decisionsTaken: [],
+                                  actionItems: [],
+                                  risksIdentified: [],
+                                  conclusion: ''
+                                };
+
+                                // Get data from agenda
+                                if (agendaData) {
+                                  if (agendaData.objectives) reportDataToSend.objectives = agendaData.objectives;
+                                  if (agendaData.agendaItems) reportDataToSend.keyDiscussionPoints = agendaData.agendaItems;
+                                  if (agendaData.preparationRequired) reportDataToSend.risksIdentified = agendaData.preparationRequired;
+                                }
+
+                                // Get data from minutes
+                                if (minutesData) {
+                                  if (minutesData.discussions) reportDataToSend.executiveSummary = minutesData.discussions;
+                                  if (minutesData.decisions) reportDataToSend.decisionsTaken = minutesData.decisions;
+                                  if (minutesData.actionItems) reportDataToSend.actionItems = minutesData.actionItems;
+                                }
+
+                                // Generate PDF using custom-report endpoint
+                                const response = await fetch(`/api/meetings/${resolvedParams.id}/custom-report`, {
+                                  method: 'POST',
+                                  headers: { 
+                                    'Content-Type': 'application/json',
+                                    'x-skip-report-creation': 'true'
+                                  },
+                                  body: JSON.stringify(reportDataToSend)
+                                });
+                                
                                 if (!response.ok) throw new Error('Failed to download PDF');
                                 
                                 const blob = await response.blob();
