@@ -32,7 +32,13 @@ export async function POST(
     }
 
     console.log('Generating PDF for meeting:', meeting.title);
+    console.log('Report data keys:', Object.keys(reportData));
+    console.log('Executive summary length:', reportData.executiveSummary?.length || 0);
+    console.log('Objectives length:', reportData.objectives?.length || 0);
+    console.log('Discussion points count:', reportData.keyDiscussionPoints?.length || 0);
+    
     const pdf = await generateReportPDF(meeting, reportData);
+    console.log('PDF generated, size:', pdf.length, 'bytes');
 
     // Only create report record if this is a new report (not a download from history)
     // Check if request has a special header to skip report creation
