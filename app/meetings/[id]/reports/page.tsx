@@ -88,19 +88,23 @@ export default function ReportsPage({ params }: { params: Promise<{ id: string }
   const handleGeneratePDF = async () => {
     setGenerating(true);
     try {
+      const reportPayload = {
+        executiveSummary,
+        objectives,
+        keyDiscussionPoints,
+        decisionsTaken,
+        actionItems,
+        risksIdentified,
+        conclusion
+      };
+      
+      console.log('Sending report data to custom-report endpoint:', reportPayload);
+      
       // Always use custom report endpoint with current form data
       const response = await fetch(`/api/meetings/${resolvedParams.id}/custom-report`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          executiveSummary,
-          objectives,
-          keyDiscussionPoints,
-          decisionsTaken,
-          actionItems,
-          risksIdentified,
-          conclusion
-        })
+        body: JSON.stringify(reportPayload)
       });
 
       if (!response.ok) {
@@ -109,7 +113,11 @@ export default function ReportsPage({ params }: { params: Promise<{ id: string }
         throw new Error('Failed to generate PDF');
       }
       
+      console.log('Response content-type:', response.headers.get('content-type'));
+      console.log('Response status:', response.status);
+      
       const blob = await response.blob();
+      console.log('Blob size:', blob.size, 'Blob type:', blob.type);
       const url = window.URL.createObjectURL(blob);
       
       // Auto download
