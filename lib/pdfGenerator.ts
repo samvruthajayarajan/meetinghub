@@ -171,22 +171,49 @@ export async function generateMinutesPDF(meeting: any, minutesData: any): Promis
     }
     return false;
   };
+  
+  // Title
   page.drawText('Meeting Minutes', { x: leftMargin, y: yPosition, size: 24, font: boldFont, color: rgb(0, 0, 0) });
   yPosition -= 40;
   page.drawText(meeting.title || 'Untitled Meeting', { x: leftMargin, y: yPosition, size: 16, font: boldFont, color: rgb(0.2, 0.2, 0.2) });
   yPosition -= 30;
+  
+  // Parse minutes data
   let parsedMinutes = minutesData;
+  console.log('Raw minutesData:', minutesData);
+  
   if (typeof minutesData === 'string') {
     try {
       const parsed = JSON.parse(minutesData);
+      console.log('Parsed JSON:', parsed);
       if (parsed.savedMinutes && parsed.savedMinutes.length > 0) {
         parsedMinutes = parsed.savedMinutes[parsed.savedMinutes.length - 1];
+        console.log('Using latest saved minutes:', parsedMinutes);
+      } else {
+        parsedMinutes = parsed;
       }
     } catch (e) {
+      console.log('Failed to parse minutes JSON:', e);
       parsedMinutes = {};
     }
   }
-  if (parsedMinutes?.attendees) {
+  
+  // If still no data, show a message
+  if (!parsedMinutes || (typeof parsedMinutes === 'object' && Object.keys(parsedMinutes).length === 0)) {
+    checkAndAddPage(60);
+    page.drawText('No minutes have been recorded for this meeting yet.', { 
+      x: leftMargin, 
+      y: yPosition, 
+      size: 12, 
+      font: font, 
+      color: rgb(0.5, 0.5, 0.5) 
+    });
+    const pdfBytes = await pdfDoc.save();
+    return Buffer.from(pdfBytes);
+  }
+  
+  // Attendees
+  if (parsedMinutes?.attendees && parsedMinutes.attendees.length > 0) {
     checkAndAddPage(60);
     page.drawText('Attendees:', { x: leftMargin, y: yPosition, size: 14, font: boldFont, color: rgb(0, 0, 0) });
     yPosition -= lineHeight;
@@ -199,6 +226,8 @@ export async function generateMinutesPDF(meeting: any, minutesData: any): Promis
     }
     yPosition -= 10;
   }
+  
+  // Discussions
   if (parsedMinutes?.discussions) {
     checkAndAddPage(60);
     page.drawText('Discussions:', { x: leftMargin, y: yPosition, size: 14, font: boldFont, color: rgb(0, 0, 0) });
@@ -211,6 +240,8 @@ export async function generateMinutesPDF(meeting: any, minutesData: any): Promis
     }
     yPosition -= 10;
   }
+  
+  // Decisions
   if (parsedMinutes?.decisions && parsedMinutes.decisions.length > 0) {
     checkAndAddPage(60);
     page.drawText('Decisions:', { x: leftMargin, y: yPosition, size: 14, font: boldFont, color: rgb(0, 0, 0) });
@@ -226,13 +257,14 @@ export async function generateMinutesPDF(meeting: any, minutesData: any): Promis
     });
     yPosition -= 10;
   }
+  
+  // Action Items
   if (parsedMinutes?.actionItems && parsedMinutes.actionItems.length > 0) {
     checkAndAddPage(60);
     page.drawText('Action Items:', { x: leftMargin, y: yPosition, size: 14, font: boldFont, color: rgb(0, 0, 0) });
     yPosition -= lineHeight;
     parsedMinutes.actionItems.forEach((item: any, index: number) => {
       checkAndAddPage(lineHeight * 2);
-      // Handle both string and object formats
       const taskText = typeof item === 'string' ? item : item.task;
       const itemLines = wrapText(`${index + 1}. ${taskText}`, pageWidth - leftMargin - 60, 12, font);
       for (const line of itemLines) {
@@ -240,7 +272,6 @@ export async function generateMinutesPDF(meeting: any, minutesData: any): Promis
         page.drawText(line, { x: leftMargin + 10, y: yPosition, size: 12, font: font, color: rgb(0, 0, 0) });
         yPosition -= lineHeight;
       }
-      // Add assignedTo and dueDate if available
       if (typeof item === 'object' && (item.assignedTo || item.dueDate)) {
         checkAndAddPage(lineHeight);
         const details = [];
@@ -252,6 +283,18 @@ export async function generateMinutesPDF(meeting: any, minutesData: any): Promis
     });
     yPosition -= 10;
   }
+  
+  // Next Meeting
+  if (parsedMinutes?.nextMeeting) {
+    checkAndAddPage(60);
+    page.drawText('Next Meeting:', { x: leftMargin, y: yPosition, size: 14, font: boldFont, color: rgb(0, 0, 0) });
+    yPosition -= lineHeight;
+    const nextMeetingDate = new Date(parsedMinutes.nextMeeting).toLocaleString();
+    page.drawText(nextMeetingDate, { x: leftMargin + 10, y: yPosition, size: 12, font: font, color: rgb(0, 0, 0) });
+    yPosition -= lineHeight;
+  }
+  
+  // Additional Notes
   if (parsedMinutes?.notes) {
     checkAndAddPage(60);
     page.drawText('Additional Notes:', { x: leftMargin, y: yPosition, size: 14, font: boldFont, color: rgb(0, 0, 0) });
@@ -263,6 +306,7 @@ export async function generateMinutesPDF(meeting: any, minutesData: any): Promis
       yPosition -= lineHeight;
     }
   }
+  
   const pdfBytes = await pdfDoc.save();
   return Buffer.from(pdfBytes);
 }
