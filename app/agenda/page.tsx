@@ -19,12 +19,7 @@ export default function AgendaPage() {
   const router = useRouter();
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showEmailModal, setShowEmailModal] = useState(false);
-  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
   const [selectedMeetingId, setSelectedMeetingId] = useState<string | null>(null);
-  const [emailRecipients, setEmailRecipients] = useState('');
-  const [whatsappNumbers, setWhatsappNumbers] = useState('');
-  const [sending, setSending] = useState(false);
   const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
@@ -55,112 +50,60 @@ export default function AgendaPage() {
   };
 
   const handleShareEmail = (meetingId: string) => {
-    setSelectedMeetingId(meetingId);
-    setShowEmailModal(true);
+    const meeting = meetings.find(m => m.id === meetingId);
+    if (!meeting) return;
+
+    // Parse agenda data
+    let agendaContent = '';
+    try {
+      const parsed = JSON.parse(meeting.description || '{}');
+      if (parsed.savedAgendas && parsed.savedAgendas.length > 0) {
+        const agenda = parsed.savedAgendas[parsed.savedAgendas.length - 1];
+        agendaContent = `Meeting: ${meeting.title}\n\n`;
+        if (agenda.objectives) agendaContent += `Objectives:\n${agenda.objectives}\n\n`;
+        if (agenda.agendaItems && agenda.agendaItems.length > 0) {
+          agendaContent += 'Agenda Items:\n';
+          agenda.agendaItems.forEach((item: any, idx: number) => {
+            agendaContent += `${idx + 1}. ${item.topic}\n`;
+            if (item.description) agendaContent += `   ${item.description}\n`;
+          });
+        }
+      }
+    } catch (e) {
+      agendaContent = `Meeting: ${meeting.title}\nDate: ${new Date(meeting.date).toLocaleString()}`;
+    }
+
+    const subject = `Meeting Agenda: ${meeting.title}`;
+    const body = encodeURIComponent(agendaContent);
+    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${body}`;
   };
 
   const handleShareWhatsApp = (meetingId: string) => {
-    setSelectedMeetingId(meetingId);
-    setShowWhatsAppModal(true);
-  };
+    const meeting = meetings.find(m => m.id === meetingId);
+    if (!meeting) return;
 
-  const handleSendEmail = async () => {
-    if (!selectedMeetingId) return;
-    
-    if (!emailRecipients.trim()) {
-      alert('Please enter at least one email recipient');
-      return;
-    }
-
-    setSending(true);
+    // Parse agenda data
+    let agendaContent = '';
     try {
-      const recipients = emailRecipients.split(',').map(email => email.trim()).filter(email => email);
-      
-      const response = await fetch(`/api/meetings/${selectedMeetingId}/email-agenda-pdf`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recipients }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        if (data.needsGmailAuth) {
-          alert('Please connect your Gmail account in Profile to send emails from your account.');
-          router.push('/user');
-        } else {
-          throw new Error(data.error || 'Failed to send email');
+      const parsed = JSON.parse(meeting.description || '{}');
+      if (parsed.savedAgendas && parsed.savedAgendas.length > 0) {
+        const agenda = parsed.savedAgendas[parsed.savedAgendas.length - 1];
+        agendaContent = `*Meeting Agenda: ${meeting.title}*\n\n`;
+        if (agenda.objectives) agendaContent += `*Objectives:*\n${agenda.objectives}\n\n`;
+        if (agenda.agendaItems && agenda.agendaItems.length > 0) {
+          agendaContent += '*Agenda Items:*\n';
+          agenda.agendaItems.forEach((item: any, idx: number) => {
+            agendaContent += `${idx + 1}. ${item.topic}\n`;
+            if (item.description) agendaContent += `   ${item.description}\n`;
+          });
         }
-        return;
       }
-
-      alert('✅ Agenda PDF sent successfully!');
-      setShowEmailModal(false);
-      setEmailRecipients('');
-      setSelectedMeetingId(null);
-    } catch (error: any) {
-      console.error('Error sending email:', error);
-      alert(`Failed to send email: ${error.message}`);
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const handleSendWhatsApp = async () => {
-    if (!selectedMeetingId) return;
-    
-    if (!whatsappNumbers.trim()) {
-      alert('Please enter at least one WhatsApp number');
-      return;
+    } catch (e) {
+      agendaContent = `*Meeting Agenda: ${meeting.title}*\nDate: ${new Date(meeting.date).toLocaleString()}`;
     }
 
-    setSending(true);
-    try {
-      const phoneNumbers = whatsappNumbers
-        .split(/[\n,]+/)
-        .map(num => num.trim())
-        .filter(num => num.length > 0);
-
-      if (phoneNumbers.length === 0) {
-        alert('Please enter valid phone numbers');
-        setSending(false);
-        return;
-      }
-
-      const response = await fetch(`/api/meetings/${selectedMeetingId}/whatsapp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phoneNumbers }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to send WhatsApp messages');
-      }
-      
-      if (data.method === 'whatsapp_web' && data.links) {
-        let openedCount = 0;
-        for (const link of data.links) {
-          window.open(link.url, '_blank');
-          openedCount++;
-          await new Promise(resolve => setTimeout(resolve, 500));
-        }
-        alert(`✅ Opened ${openedCount} WhatsApp chat(s)!\n\nClick "Send" in each WhatsApp window to deliver the message.`);
-      } else {
-        const successMsg = `✅ WhatsApp messages sent successfully!\n\nSent: ${data.totalSent}\nFailed: ${data.totalFailed}`;
-        alert(successMsg);
-      }
-      
-      setShowWhatsAppModal(false);
-      setWhatsappNumbers('');
-      setSelectedMeetingId(null);
-    } catch (error: any) {
-      console.error('Error sending WhatsApp:', error);
-      alert(`Failed to send WhatsApp messages: ${error.message}`);
-    } finally {
-      setSending(false);
-    }
+    const message = encodeURIComponent(agendaContent);
+    window.open(`https://wa.me/?text=${message}`, '_blank');
   };
 
   const handleDownloadAgenda = async (meetingId: string) => {
@@ -334,94 +277,6 @@ export default function AgendaPage() {
           </div>
         )}
       </main>
-
-      {/* Email Modal */}
-      {showEmailModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl">
-            <h3 className="text-xl font-bold text-gray-800 mb-4">Share Agenda via Email</h3>
-            <p className="text-sm text-gray-600 mb-4">
-              Enter email addresses (comma-separated)
-            </p>
-            <textarea
-              value={emailRecipients}
-              onChange={(e) => setEmailRecipients(e.target.value)}
-              placeholder="email1@example.com, email2@example.com"
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent mb-4 min-h-[100px]"
-            />
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowEmailModal(false);
-                  setEmailRecipients('');
-                  setSelectedMeetingId(null);
-                }}
-                className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-colors font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSendEmail}
-                disabled={sending}
-                className="flex-1 px-4 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors font-medium disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {sending ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    Sending...
-                  </>
-                ) : (
-                  'Send Email'
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* WhatsApp Modal */}
-      {showWhatsAppModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl">
-            <h3 className="text-xl font-bold text-gray-800 mb-4">Share Agenda via WhatsApp</h3>
-            <p className="text-sm text-gray-600 mb-4">
-              Enter phone numbers with country code (one per line or comma-separated)
-            </p>
-            <textarea
-              value={whatsappNumbers}
-              onChange={(e) => setWhatsappNumbers(e.target.value)}
-              placeholder="+1234567890&#10;+9876543210"
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent mb-4 min-h-[100px]"
-            />
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowWhatsAppModal(false);
-                  setWhatsappNumbers('');
-                  setSelectedMeetingId(null);
-                }}
-                className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-colors font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSendWhatsApp}
-                disabled={sending}
-                className="flex-1 px-4 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors font-medium disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {sending ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    Sending...
-                  </>
-                ) : (
-                  'Send WhatsApp'
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

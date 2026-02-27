@@ -49,11 +49,6 @@ export default function MinutesPage({ params }: { params: Promise<{ id: string }
     dueDate: '',
   });
   const [generating, setGenerating] = useState(false);
-  const [sending, setSending] = useState(false);
-  const [showEmailModal, setShowEmailModal] = useState(false);
-  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
-  const [emailRecipients, setEmailRecipients] = useState('');
-  const [whatsappNumbers, setWhatsappNumbers] = useState('');
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -268,89 +263,75 @@ export default function MinutesPage({ params }: { params: Promise<{ id: string }
     }
   };
 
-  const handleSendEmail = async () => {
-    if (!emailRecipients.trim()) {
-      alert('Please enter at least one email address');
+  const handleSendEmail = () => {
+    if (!minutesData.discussions.trim()) {
+      alert('Please add discussions before sharing minutes');
       return;
     }
 
-    setSending(true);
-    try {
-      const recipientList = emailRecipients.split(',').map(email => email.trim()).filter(email => email);
-      
-      const response = await fetch(`/api/meetings/${resolvedParams.id}/email`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recipients: recipientList }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        if (data.needsGmailAuth) {
-          alert(data.error + '\n\nRedirecting to Profile page...');
-          router.push('/user');
-          return;
-        }
-        throw new Error(data.error || 'Failed to send email');
-      }
-      
-      alert(`Minutes sent successfully from your ${data.method === 'gmail' ? 'Gmail' : 'email'} account!`);
-      setShowEmailModal(false);
-      setEmailRecipients('');
-    } catch (error: any) {
-      console.error('Error sending email:', error);
-      alert(`Failed to send email: ${error.message}`);
-    } finally {
-      setSending(false);
+    let minutesContent = `Meeting Minutes: ${meeting?.title}\n\n`;
+    
+    if (minutesData.attendees && minutesData.attendees.length > 0) {
+      minutesContent += `Attendees: ${minutesData.attendees.join(', ')}\n\n`;
     }
+    
+    if (minutesData.discussions) {
+      minutesContent += `Discussions:\n${minutesData.discussions}\n\n`;
+    }
+    
+    if (minutesData.decisions && minutesData.decisions.length > 0) {
+      minutesContent += `Decisions Made:\n`;
+      minutesData.decisions.forEach((decision, idx) => {
+        minutesContent += `${idx + 1}. ${decision}\n`;
+      });
+      minutesContent += '\n';
+    }
+    
+    if (minutesData.actionItems && minutesData.actionItems.length > 0) {
+      minutesContent += `Action Items:\n`;
+      minutesData.actionItems.forEach((item, idx) => {
+        minutesContent += `${idx + 1}. ${item.task} - Assigned to: ${item.assignedTo} - Due: ${new Date(item.dueDate).toLocaleDateString()}\n`;
+      });
+    }
+
+    const subject = `Meeting Minutes: ${meeting?.title}`;
+    const body = encodeURIComponent(minutesContent);
+    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${body}`;
   };
 
-  const handleSendWhatsApp = async () => {
-    if (!whatsappNumbers.trim()) {
-      alert('Please enter at least one WhatsApp number');
+  const handleSendWhatsApp = () => {
+    if (!minutesData.discussions.trim()) {
+      alert('Please add discussions before sharing minutes');
       return;
     }
 
-    setSending(true);
-    try {
-      const phoneNumbers = whatsappNumbers
-        .split('\n')
-        .map(num => num.trim())
-        .filter(num => num.length > 0);
-      
-      if (phoneNumbers.length === 0) {
-        alert('Please enter at least one valid phone number');
-        setSending(false);
-        return;
-      }
-
-      const response = await fetch(`/api/meetings/${resolvedParams.id}/whatsapp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phoneNumbers }),
-      });
-
-      if (!response.ok) throw new Error('Failed to generate WhatsApp messages');
-      
-      const data = await response.json();
-      
-      // Open WhatsApp links for each number
-      data.links.forEach((link: any, index: number) => {
-        setTimeout(() => {
-          window.open(link.url, '_blank');
-        }, index * 1000); // 1 second delay between each link
-      });
-      
-      alert(`WhatsApp links generated for ${data.links.length} recipient(s)!`);
-      setShowWhatsAppModal(false);
-      setWhatsappNumbers('');
-    } catch (error) {
-      console.error('Error sending WhatsApp:', error);
-      alert('Failed to generate WhatsApp messages. Please try again.');
-    } finally {
-      setSending(false);
+    let minutesContent = `*Meeting Minutes: ${meeting?.title}*\n\n`;
+    
+    if (minutesData.attendees && minutesData.attendees.length > 0) {
+      minutesContent += `*Attendees:* ${minutesData.attendees.join(', ')}\n\n`;
     }
+    
+    if (minutesData.discussions) {
+      minutesContent += `*Discussions:*\n${minutesData.discussions}\n\n`;
+    }
+    
+    if (minutesData.decisions && minutesData.decisions.length > 0) {
+      minutesContent += `*Decisions Made:*\n`;
+      minutesData.decisions.forEach((decision, idx) => {
+        minutesContent += `${idx + 1}. ${decision}\n`;
+      });
+      minutesContent += '\n';
+    }
+    
+    if (minutesData.actionItems && minutesData.actionItems.length > 0) {
+      minutesContent += `*Action Items:*\n`;
+      minutesData.actionItems.forEach((item, idx) => {
+        minutesContent += `${idx + 1}. ${item.task}\n   Assigned to: ${item.assignedTo}\n   Due: ${new Date(item.dueDate).toLocaleDateString()}\n`;
+      });
+    }
+
+    const message = encodeURIComponent(minutesContent);
+    window.open(`https://wa.me/?text=${message}`, '_blank');
   };
 
   if (status === 'loading' || loading) {
@@ -656,7 +637,7 @@ export default function MinutesPage({ params }: { params: Promise<{ id: string }
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Email Button */}
             <button
-              onClick={() => setShowEmailModal(true)}
+              onClick={handleSendEmail}
               className="p-6 bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-green-300 rounded-xl transition-all group shadow-sm"
             >
               <div className="flex items-center gap-4">
@@ -674,7 +655,7 @@ export default function MinutesPage({ params }: { params: Promise<{ id: string }
 
             {/* WhatsApp Button */}
             <button
-              onClick={() => setShowWhatsAppModal(true)}
+              onClick={handleSendWhatsApp}
               className="p-6 bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-green-300 rounded-xl transition-all group shadow-sm"
             >
               <div className="flex items-center gap-4">
@@ -706,103 +687,6 @@ export default function MinutesPage({ params }: { params: Promise<{ id: string }
           </button>
         </div>
       </main>
-
-      {/* Email Modal */}
-      {showEmailModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white border border-gray-200 rounded-xl p-6 max-w-md w-full shadow-xl">
-            <h3 className="text-xl font-bold text-gray-800 mb-4">Send Minutes via Email</h3>
-            
-            <p className="text-gray-600 text-sm mb-4">Enter email addresses separated by commas</p>
-            <textarea
-              value={emailRecipients}
-              onChange={(e) => setEmailRecipients(e.target.value)}
-              rows={4}
-              className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all resize-none mb-4"
-              placeholder="recipient@example.com, another@example.com"
-            />
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowEmailModal(false);
-                  setEmailRecipients('');
-                }}
-                className="flex-1 px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white font-semibold rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSendEmail}
-                disabled={sending}
-                className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {sending ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    <span>Sending...</span>
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                    Send Minutes
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* WhatsApp Modal */}
-      {showWhatsAppModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white border border-gray-200 rounded-xl p-6 max-w-md w-full shadow-xl">
-            <h3 className="text-xl font-bold text-gray-800 mb-4">Send Minutes via WhatsApp</h3>
-            
-            <p className="text-gray-600 text-sm mb-4">Enter WhatsApp numbers (one per line, with country code)</p>
-            <textarea
-              value={whatsappNumbers}
-              onChange={(e) => setWhatsappNumbers(e.target.value)}
-              rows={4}
-              className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all resize-none mb-2"
-              placeholder="+1234567890&#10;+9876543210&#10;+1122334455"
-            />
-            <p className="text-xs text-gray-600 mb-4">Enter one phone number per line</p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowWhatsAppModal(false);
-                  setWhatsappNumbers('');
-                }}
-                className="flex-1 px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white font-semibold rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSendWhatsApp}
-                disabled={sending}
-                className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {sending ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    <span>Sending...</span>
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-6 h-6 text-green-600" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                    </svg>
-                    Send Minutes
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

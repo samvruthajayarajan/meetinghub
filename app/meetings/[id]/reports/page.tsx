@@ -11,11 +11,6 @@ export default function ReportsPage({ params }: { params: Promise<{ id: string }
   const [loading, setLoading] = useState(true);
   const [meeting, setMeeting] = useState<any>(null);
   const [generating, setGenerating] = useState(false);
-  const [sending, setSending] = useState(false);
-  const [showEmailModal, setShowEmailModal] = useState(false);
-  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
-  const [emailRecipients, setEmailRecipients] = useState('');
-  const [whatsappNumber, setWhatsappNumber] = useState('');
   const [pdfUrl, setPdfUrl] = useState('');
   const [expandedReportId, setExpandedReportId] = useState<string | null>(null);
   const [showReportForm, setShowReportForm] = useState(false);
@@ -227,87 +222,95 @@ export default function ReportsPage({ params }: { params: Promise<{ id: string }
     setRisksIdentified(risksIdentified.filter((_, i) => i !== index));
   };
 
-  const handleSendEmail = async () => {
-    if (!emailRecipients.trim()) {
-      alert('Please enter at least one email address');
-      return;
-    }
-
-    setSending(true);
-    try {
-      // Prepare report data from current form state
-      const reportDataToSend = {
-        executiveSummary,
-        objectives,
-        keyDiscussionPoints,
-        decisionsTaken,
-        actionItems,
-        risksIdentified,
-        conclusion
-      };
-
-      const recipientList = emailRecipients.split(',').map(email => email.trim()).filter(email => email);
-      
-      const response = await fetch(`/api/meetings/${resolvedParams.id}/email-report`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          recipients: recipientList,
-          reportData: reportDataToSend
-        }),
+  const handleSendEmail = () => {
+    // Prepare report content
+    let reportContent = `Meeting Report: ${meeting?.title}\n\n`;
+    
+    if (executiveSummary) reportContent += `Executive Summary:\n${executiveSummary}\n\n`;
+    if (objectives) reportContent += `Objectives:\n${objectives}\n\n`;
+    
+    if (keyDiscussionPoints && keyDiscussionPoints.length > 0) {
+      reportContent += `Key Discussion Points:\n`;
+      keyDiscussionPoints.forEach((point, idx) => {
+        reportContent += `${idx + 1}. ${point.topic}\n   ${point.description}\n`;
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        if (data.needsGmailAuth) {
-          alert(data.error + '\n\nRedirecting to Profile page...');
-          router.push('/user');
-          return;
-        }
-        throw new Error(data.error || 'Failed to send email');
-      }
-      
-      alert(`Report sent successfully from your ${data.method === 'gmail' ? 'Gmail' : 'email'} account!`);
-      setShowEmailModal(false);
-      setEmailRecipients('');
-    } catch (error: any) {
-      console.error('Error sending email:', error);
-      alert(`Failed to send email: ${error.message}`);
-    } finally {
-      setSending(false);
+      reportContent += '\n';
     }
+    
+    if (decisionsTaken && decisionsTaken.length > 0) {
+      reportContent += `Decisions Taken:\n`;
+      decisionsTaken.forEach((decision, idx) => {
+        reportContent += `${idx + 1}. ${decision}\n`;
+      });
+      reportContent += '\n';
+    }
+    
+    if (actionItems && actionItems.length > 0) {
+      reportContent += `Action Items:\n`;
+      actionItems.forEach((item, idx) => {
+        reportContent += `${idx + 1}. ${item.task} - Assigned to: ${item.assignedTo} - Due: ${new Date(item.dueDate).toLocaleDateString()}\n`;
+      });
+      reportContent += '\n';
+    }
+    
+    if (risksIdentified && risksIdentified.length > 0) {
+      reportContent += `Risks Identified:\n`;
+      risksIdentified.forEach((risk, idx) => {
+        reportContent += `${idx + 1}. ${risk}\n`;
+      });
+      reportContent += '\n';
+    }
+    
+    if (conclusion) reportContent += `Conclusion:\n${conclusion}`;
+
+    const subject = `Meeting Report: ${meeting?.title}`;
+    const body = encodeURIComponent(reportContent);
+    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${body}`;
   };
 
-  const handleSendWhatsApp = async () => {
-    if (!whatsappNumber.trim()) {
-      alert('Please enter a WhatsApp number');
-      return;
-    }
-
-    setSending(true);
-    try {
-      const response = await fetch(`/api/meetings/${resolvedParams.id}/whatsapp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phoneNumber: whatsappNumber }),
+  const handleSendWhatsApp = () => {
+    // Prepare report content
+    let reportContent = `*Meeting Report: ${meeting?.title}*\n\n`;
+    
+    if (executiveSummary) reportContent += `*Executive Summary:*\n${executiveSummary}\n\n`;
+    if (objectives) reportContent += `*Objectives:*\n${objectives}\n\n`;
+    
+    if (keyDiscussionPoints && keyDiscussionPoints.length > 0) {
+      reportContent += `*Key Discussion Points:*\n`;
+      keyDiscussionPoints.forEach((point, idx) => {
+        reportContent += `${idx + 1}. ${point.topic}\n   ${point.description}\n`;
       });
-
-      if (!response.ok) throw new Error('Failed to generate WhatsApp message');
-      
-      const data = await response.json();
-      
-      // Open WhatsApp with the formatted message
-      window.open(data.url, '_blank');
-      
-      setShowWhatsAppModal(false);
-      setWhatsappNumber('');
-    } catch (error) {
-      console.error('Error sending WhatsApp:', error);
-      alert('Failed to generate WhatsApp message. Please try again.');
-    } finally {
-      setSending(false);
+      reportContent += '\n';
     }
+    
+    if (decisionsTaken && decisionsTaken.length > 0) {
+      reportContent += `*Decisions Taken:*\n`;
+      decisionsTaken.forEach((decision, idx) => {
+        reportContent += `${idx + 1}. ${decision}\n`;
+      });
+      reportContent += '\n';
+    }
+    
+    if (actionItems && actionItems.length > 0) {
+      reportContent += `*Action Items:*\n`;
+      actionItems.forEach((item, idx) => {
+        reportContent += `${idx + 1}. ${item.task}\n   Assigned to: ${item.assignedTo}\n   Due: ${new Date(item.dueDate).toLocaleDateString()}\n`;
+      });
+      reportContent += '\n';
+    }
+    
+    if (risksIdentified && risksIdentified.length > 0) {
+      reportContent += `*Risks Identified:*\n`;
+      risksIdentified.forEach((risk, idx) => {
+        reportContent += `${idx + 1}. ${risk}\n`;
+      });
+      reportContent += '\n';
+    }
+    
+    if (conclusion) reportContent += `*Conclusion:*\n${conclusion}`;
+
+    const message = encodeURIComponent(reportContent);
+    window.open(`https://wa.me/?text=${message}`, '_blank');
   };
 
   if (status === 'loading' || loading) {
@@ -655,7 +658,7 @@ export default function ReportsPage({ params }: { params: Promise<{ id: string }
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Email Button */}
             <button
-              onClick={() => setShowEmailModal(true)}
+              onClick={handleSendEmail}
               className="p-6 bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-green-300 rounded-xl transition-all group shadow-sm"
             >
               <div className="flex items-center gap-4">
@@ -673,7 +676,7 @@ export default function ReportsPage({ params }: { params: Promise<{ id: string }
 
             {/* WhatsApp Button */}
             <button
-              onClick={() => setShowWhatsAppModal(true)}
+              onClick={handleSendWhatsApp}
               className="p-6 bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-green-300 rounded-xl transition-all group shadow-sm"
             >
               <div className="flex items-center gap-4">
@@ -1026,166 +1029,6 @@ export default function ReportsPage({ params }: { params: Promise<{ id: string }
         )}
 
       </main>
-
-      {/* Email Modal */}
-      {showEmailModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white border border-gray-200 rounded-xl p-6 max-w-md w-full shadow-xl">
-            <h3 className="text-xl font-bold text-black mb-4">Send Report via Email</h3>
-            
-            <p className="text-gray-600 text-sm mb-4">Enter email addresses separated by commas</p>
-            <textarea
-              value={emailRecipients}
-              onChange={(e) => setEmailRecipients(e.target.value)}
-              rows={4}
-              className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all resize-none mb-4"
-              placeholder="recipient@example.com, another@example.com"
-            />
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowEmailModal(false);
-                  setEmailRecipients('');
-                }}
-                className="flex-1 px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white font-semibold rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSendEmail}
-                disabled={sending}
-                className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {sending ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    <span>Sending...</span>
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                    Send Report
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* WhatsApp Modal */}
-      {showWhatsAppModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white border border-gray-200 rounded-xl p-6 max-w-md w-full shadow-xl">
-            <h3 className="text-xl font-bold text-black mb-4">Send Report via WhatsApp</h3>
-            <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
-              <p className="text-sm text-green-800 flex items-center gap-2">
-                <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                <span>A PDF report will be generated and included in the WhatsApp message with a download link.</span>
-              </p>
-            </div>
-            <p className="text-gray-600 text-sm mb-4">Enter WhatsApp numbers (one per line, with country code)</p>
-            <textarea
-              value={whatsappNumber}
-              onChange={(e) => setWhatsappNumber(e.target.value)}
-              rows={4}
-              className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all resize-none mb-2"
-              placeholder="+1234567890&#10;+9876543210&#10;+1122334455"
-            />
-            <p className="text-xs text-gray-600 mb-4">Enter one phone number per line</p>
-            <div className="flex gap-3">
-              <button
-                onClick={async () => {
-                  if (!whatsappNumber.trim()) {
-                    alert('Please enter at least one WhatsApp number');
-                    return;
-                  }
-                  setSending(true);
-                  try {
-                    // Split by newlines and filter empty lines
-                    const phoneNumbers = whatsappNumber
-                      .split('\n')
-                      .map(num => num.trim())
-                      .filter(num => num.length > 0);
-                    
-                    if (phoneNumbers.length === 0) {
-                      alert('Please enter at least one valid phone number');
-                      setSending(false);
-                      return;
-                    }
-
-                    // Prepare report data from current form state
-                    const reportDataToSend = {
-                      executiveSummary,
-                      objectives,
-                      keyDiscussionPoints,
-                      decisionsTaken,
-                      actionItems,
-                      risksIdentified,
-                      conclusion
-                    };
-
-                    const response = await fetch(`/api/meetings/${resolvedParams.id}/whatsapp-report`, {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ 
-                        phoneNumbers,
-                        reportData: reportDataToSend
-                      }),
-                    });
-
-                    if (!response.ok) throw new Error('Failed to generate WhatsApp messages with PDF');
-                    
-                    const data = await response.json();
-                    
-                    // Close modal and reset state
-                    setShowWhatsAppModal(false);
-                    setWhatsappNumber('');
-                    setSending(false);
-                    
-                    // Show all WhatsApp links in a copyable format
-                    const linksList = data.links.map((item: any, index: number) => 
-                      `${index + 1}. ${item.phoneNumber}\n   ${item.url}`
-                    ).join('\n\n');
-                    
-                    const message = `Report PDF generated and links created!\n\nPDF URL: ${data.pdfUrl}\n\nWhatsApp links for ${data.links.length} recipient(s):\n\n${linksList}\n\nThe PDF link will expire in 24 hours.\n\nCopy each link and paste in your browser, or click OK to open the first one now.`;
-                    
-                    // Copy links to clipboard
-                    navigator.clipboard.writeText(data.links.map((item: any) => item.url).join('\n\n')).catch(() => {});
-                    
-                    if (confirm(message)) {
-                      // Open first recipient
-                      window.location.href = data.links[0].url;
-                    }
-                    
-                  } catch (error: any) {
-                    alert(`Failed to send WhatsApp: ${error.message}`);
-                    setSending(false);
-                  }
-                }}
-                disabled={sending}
-                className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {sending ? 'Generating...' : 'Generate Links'}
-              </button>
-              <button
-                onClick={() => {
-                  setShowWhatsAppModal(false);
-                  setWhatsappNumber('');
-                }}
-                disabled={sending}
-                className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white font-semibold rounded-lg transition-colors disabled:opacity-50"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

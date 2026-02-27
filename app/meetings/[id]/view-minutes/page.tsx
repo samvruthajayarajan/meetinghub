@@ -26,11 +26,6 @@ export default function ViewMinutesPage({ params }: { params: Promise<{ id: stri
   const [meeting, setMeeting] = useState<any>(null);
   const [savedMinutes, setSavedMinutes] = useState<SavedMinutes[]>([]);
   const [viewingMinutesId, setViewingMinutesId] = useState<string | null>(null);
-  const [showEmailModal, setShowEmailModal] = useState(false);
-  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
-  const [emailRecipients, setEmailRecipients] = useState('');
-  const [whatsappNumber, setWhatsappNumber] = useState('');
-  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -68,53 +63,77 @@ export default function ViewMinutesPage({ params }: { params: Promise<{ id: stri
     }
   };
 
-  const handleSendEmail = async () => {
-    if (!emailRecipients.trim()) {
-      alert('Please enter at least one email recipient');
+  const handleSendEmail = () => {
+    if (savedMinutes.length === 0) {
+      alert('No minutes available to share');
       return;
     }
 
-    setSending(true);
-    try {
-      alert('✅ Minutes sent successfully via email!');
-      setShowEmailModal(false);
-      setEmailRecipients('');
-    } catch (error: any) {
-      console.error('Error sending email:', error);
-      alert(`Failed to send email: ${error.message}`);
-    } finally {
-      setSending(false);
+    const latestMinutes = savedMinutes[savedMinutes.length - 1];
+    let minutesContent = `*Meeting Minutes: ${meeting?.title}*\n\n`;
+    
+    if (latestMinutes.attendees && latestMinutes.attendees.length > 0) {
+      minutesContent += `Attendees: ${latestMinutes.attendees.join(', ')}\n\n`;
     }
+    
+    if (latestMinutes.discussions) {
+      minutesContent += `Discussions:\n${latestMinutes.discussions}\n\n`;
+    }
+    
+    if (latestMinutes.decisions && latestMinutes.decisions.length > 0) {
+      minutesContent += `Decisions Made:\n`;
+      latestMinutes.decisions.forEach((decision, idx) => {
+        minutesContent += `${idx + 1}. ${decision}\n`;
+      });
+      minutesContent += '\n';
+    }
+    
+    if (latestMinutes.actionItems && latestMinutes.actionItems.length > 0) {
+      minutesContent += `Action Items:\n`;
+      latestMinutes.actionItems.forEach((item, idx) => {
+        minutesContent += `${idx + 1}. ${item.task} - Assigned to: ${item.assignedTo} - Due: ${new Date(item.dueDate).toLocaleDateString()}\n`;
+      });
+    }
+
+    const subject = `Meeting Minutes: ${meeting?.title}`;
+    const body = encodeURIComponent(minutesContent);
+    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${body}`;
   };
 
-  const handleSendWhatsApp = async () => {
-    if (!whatsappNumber.trim()) {
-      alert('Please enter at least one WhatsApp number');
+  const handleSendWhatsApp = () => {
+    if (savedMinutes.length === 0) {
+      alert('No minutes available to share');
       return;
     }
 
-    setSending(true);
-    try {
-      const phoneNumbers = whatsappNumber
-        .split(/[\n,]+/)
-        .map(num => num.trim())
-        .filter(num => num.length > 0);
-
-      if (phoneNumbers.length === 0) {
-        alert('Please enter valid phone numbers');
-        setSending(false);
-        return;
-      }
-
-      alert('✅ Minutes shared via WhatsApp!');
-      setShowWhatsAppModal(false);
-      setWhatsappNumber('');
-    } catch (error: any) {
-      console.error('Error sending WhatsApp:', error);
-      alert(`Failed to send WhatsApp messages: ${error.message}`);
-    } finally {
-      setSending(false);
+    const latestMinutes = savedMinutes[savedMinutes.length - 1];
+    let minutesContent = `*Meeting Minutes: ${meeting?.title}*\n\n`;
+    
+    if (latestMinutes.attendees && latestMinutes.attendees.length > 0) {
+      minutesContent += `*Attendees:* ${latestMinutes.attendees.join(', ')}\n\n`;
     }
+    
+    if (latestMinutes.discussions) {
+      minutesContent += `*Discussions:*\n${latestMinutes.discussions}\n\n`;
+    }
+    
+    if (latestMinutes.decisions && latestMinutes.decisions.length > 0) {
+      minutesContent += `*Decisions Made:*\n`;
+      latestMinutes.decisions.forEach((decision, idx) => {
+        minutesContent += `${idx + 1}. ${decision}\n`;
+      });
+      minutesContent += '\n';
+    }
+    
+    if (latestMinutes.actionItems && latestMinutes.actionItems.length > 0) {
+      minutesContent += `*Action Items:*\n`;
+      latestMinutes.actionItems.forEach((item, idx) => {
+        minutesContent += `${idx + 1}. ${item.task}\n   Assigned to: ${item.assignedTo}\n   Due: ${new Date(item.dueDate).toLocaleDateString()}\n`;
+      });
+    }
+
+    const message = encodeURIComponent(minutesContent);
+    window.open(`https://wa.me/?text=${message}`, '_blank');
   };
 
   if (status === 'loading' || loading) {
@@ -181,8 +200,7 @@ export default function ViewMinutesPage({ params }: { params: Promise<{ id: stri
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 max-w-2xl mx-auto">
               {/* Email Button */}
               <button
-                onClick={() => setShowEmailModal(true)}
-                disabled={sending}
+                onClick={handleSendEmail}
                 className="group relative p-4 sm:p-6 bg-white hover:bg-blue-50 border-2 border-gray-200 hover:border-blue-300 rounded-xl transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
               >
                 <div className="flex flex-col items-center gap-2 sm:gap-3">
@@ -200,8 +218,7 @@ export default function ViewMinutesPage({ params }: { params: Promise<{ id: stri
 
               {/* WhatsApp Button */}
               <button
-                onClick={() => setShowWhatsAppModal(true)}
-                disabled={sending}
+                onClick={handleSendWhatsApp}
                 className="group relative p-4 sm:p-6 bg-white hover:bg-green-50 border-2 border-gray-200 hover:border-green-300 rounded-xl transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
               >
                 <div className="flex flex-col items-center gap-2 sm:gap-3">
@@ -325,92 +342,6 @@ export default function ViewMinutesPage({ params }: { params: Promise<{ id: stri
           </div>
         )}
       </main>
-
-      {/* Email Modal */}
-      {showEmailModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl">
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-6 rounded-t-2xl">
-              <h3 className="text-2xl font-bold text-white">Send Minutes via Email</h3>
-              <p className="text-blue-100 text-sm mt-0.5">Share with participants</p>
-            </div>
-
-            <div className="p-8">
-              <label className="block text-sm font-semibold text-gray-700 mb-3">Email Recipients</label>
-              <textarea
-                value={emailRecipients}
-                onChange={(e) => setEmailRecipients(e.target.value)}
-                rows={4}
-                className="w-full px-4 py-3.5 bg-gray-50 border-2 border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all resize-none mb-6"
-                placeholder="Enter email addresses (comma separated)&#10;example@email.com, another@email.com"
-              />
-
-              <div className="flex gap-3">
-                <button
-                  onClick={handleSendEmail}
-                  disabled={sending}
-                  className="flex-1 px-6 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl transition-all duration-300 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {sending ? 'Sending...' : 'Send Email'}
-                </button>
-                <button
-                  onClick={() => {
-                    setShowEmailModal(false);
-                    setEmailRecipients('');
-                  }}
-                  disabled={sending}
-                  className="px-6 py-3.5 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-xl transition-all duration-300 disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* WhatsApp Modal */}
-      {showWhatsAppModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl">
-            <div className="bg-gradient-to-r from-green-600 to-emerald-600 px-8 py-6 rounded-t-2xl">
-              <h3 className="text-2xl font-bold text-white">Send via WhatsApp</h3>
-              <p className="text-green-100 text-sm mt-0.5">Share minutes instantly</p>
-            </div>
-
-            <div className="p-8">
-              <label className="block text-sm font-semibold text-gray-700 mb-3">WhatsApp Numbers</label>
-              <textarea
-                value={whatsappNumber}
-                onChange={(e) => setWhatsappNumber(e.target.value)}
-                rows={4}
-                className="w-full px-4 py-3.5 bg-gray-50 border-2 border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all resize-none font-mono text-sm mb-6"
-                placeholder="+1234567890&#10;+919876543210&#10;+447123456789"
-              />
-
-              <div className="flex gap-3">
-                <button
-                  onClick={handleSendWhatsApp}
-                  disabled={sending}
-                  className="flex-1 px-6 py-3.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold rounded-xl transition-all duration-300 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {sending ? 'Processing...' : 'Send WhatsApp'}
-                </button>
-                <button
-                  onClick={() => {
-                    setShowWhatsAppModal(false);
-                    setWhatsappNumber('');
-                  }}
-                  disabled={sending}
-                  className="px-6 py-3.5 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-xl transition-all duration-300 disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
