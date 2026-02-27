@@ -88,76 +88,46 @@ export default function ReportsPage({ params }: { params: Promise<{ id: string }
   const handleGeneratePDF = async () => {
     setGenerating(true);
     try {
-      // If form is shown, use custom report endpoint with form data
-      if (showReportForm) {
-        const response = await fetch(`/api/meetings/${resolvedParams.id}/custom-report`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            executiveSummary,
-            objectives,
-            keyDiscussionPoints,
-            decisionsTaken,
-            actionItems,
-            risksIdentified,
-            conclusion
-          })
-        });
+      // Always use custom report endpoint with current form data
+      const response = await fetch(`/api/meetings/${resolvedParams.id}/custom-report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          executiveSummary,
+          objectives,
+          keyDiscussionPoints,
+          decisionsTaken,
+          actionItems,
+          risksIdentified,
+          conclusion
+        })
+      });
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('PDF generation failed:', errorText);
-          throw new Error('Failed to generate PDF');
-        }
-        
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        
-        // Auto download
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `meeting-report-${meeting?.title.replace(/[^a-zA-Z0-9-_]/g, '-')}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        
-        // Wait a moment for database transaction to complete
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Refresh meeting data to show the new report in history
-        await fetchMeeting();
-        
-        alert('PDF generated and saved successfully!');
-        setShowReportForm(false);
-      } else {
-        // Use default endpoint with existing data
-        const response = await fetch(`/api/meetings/${resolvedParams.id}/pdf`);
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('PDF generation failed:', errorText);
-          throw new Error('Failed to generate PDF');
-        }
-        
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        setPdfUrl(url);
-        
-        // Auto download
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `meeting-report-${meeting?.title.replace(/[^a-zA-Z0-9-_]/g, '-')}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        
-        // Wait a moment for database transaction to complete
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Refresh meeting data to show the new report in history
-        await fetchMeeting();
-        
-        alert('PDF generated and saved successfully!');
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('PDF generation failed:', errorText);
+        throw new Error('Failed to generate PDF');
       }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      
+      // Auto download
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `meeting-report-${meeting?.title.replace(/[^a-zA-Z0-9-_]/g, '-')}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      
+      // Wait a moment for database transaction to complete
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Refresh meeting data to show the new report in history
+      await fetchMeeting();
+      
+      alert('PDF generated and saved successfully!');
+      setShowReportForm(false);
     } catch (error) {
       console.error('Error generating PDF:', error);
       alert('Failed to generate PDF. Please try again.');
