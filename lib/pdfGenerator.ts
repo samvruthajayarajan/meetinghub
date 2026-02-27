@@ -355,6 +355,8 @@ export async function generateReportPDF(meeting: any, reportData: any): Promise<
   const pageWidth = 595;
   const lineHeight = 20;
   
+  console.log('generateReportPDF called with reportData:', JSON.stringify(reportData, null, 2));
+  
   const checkAndAddPage = (requiredSpace: number) => {
     if (yPosition - requiredSpace < 50) {
       page = pdfDoc.addPage([595, 842]);
@@ -378,43 +380,55 @@ export async function generateReportPDF(meeting: any, reportData: any): Promise<
   yPosition -= 30;
 
   // Executive Summary
-  if (reportData.executiveSummary) {
-    checkAndAddPage(60);
-    page.drawText('1. Executive Summary', { x: leftMargin, y: yPosition, size: 14, font: boldFont, color: rgb(0, 0, 0) });
-    yPosition -= lineHeight;
+  checkAndAddPage(60);
+  page.drawText('1. Executive Summary', { x: leftMargin, y: yPosition, size: 14, font: boldFont, color: rgb(0, 0, 0) });
+  yPosition -= lineHeight;
+  if (reportData.executiveSummary && reportData.executiveSummary.trim()) {
+    console.log('Adding executive summary:', reportData.executiveSummary);
     const summaryLines = wrapText(reportData.executiveSummary, pageWidth - leftMargin - 50, 12, font);
     for (const line of summaryLines) {
       checkAndAddPage(lineHeight);
       page.drawText(line, { x: leftMargin + 10, y: yPosition, size: 12, font: font, color: rgb(0, 0, 0) });
       yPosition -= lineHeight;
     }
-    yPosition -= 10;
+  } else {
+    console.log('No executive summary provided');
+    page.drawText('(No executive summary provided)', { x: leftMargin + 10, y: yPosition, size: 12, font: font, color: rgb(0.5, 0.5, 0.5) });
+    yPosition -= lineHeight;
   }
+  yPosition -= 10;
 
   // Objectives
-  if (reportData.objectives) {
-    checkAndAddPage(60);
-    page.drawText('2. Meeting Objectives', { x: leftMargin, y: yPosition, size: 14, font: boldFont, color: rgb(0, 0, 0) });
-    yPosition -= lineHeight;
+  checkAndAddPage(60);
+  page.drawText('2. Meeting Objectives', { x: leftMargin, y: yPosition, size: 14, font: boldFont, color: rgb(0, 0, 0) });
+  yPosition -= lineHeight;
+  if (reportData.objectives && reportData.objectives.trim()) {
+    console.log('Adding objectives:', reportData.objectives);
     const objectiveLines = wrapText(reportData.objectives, pageWidth - leftMargin - 50, 12, font);
     for (const line of objectiveLines) {
       checkAndAddPage(lineHeight);
       page.drawText(line, { x: leftMargin + 10, y: yPosition, size: 12, font: font, color: rgb(0, 0, 0) });
       yPosition -= lineHeight;
     }
-    yPosition -= 10;
+  } else {
+    console.log('No objectives provided');
+    page.drawText('(No objectives provided)', { x: leftMargin + 10, y: yPosition, size: 12, font: font, color: rgb(0.5, 0.5, 0.5) });
+    yPosition -= lineHeight;
   }
+  yPosition -= 10;
 
   // Key Discussion Points
-  if (reportData.keyDiscussionPoints && reportData.keyDiscussionPoints.length > 0) {
-    checkAndAddPage(60);
-    page.drawText('3. Key Discussion Points', { x: leftMargin, y: yPosition, size: 14, font: boldFont, color: rgb(0, 0, 0) });
-    yPosition -= lineHeight;
+  checkAndAddPage(60);
+  page.drawText('3. Key Discussion Points', { x: leftMargin, y: yPosition, size: 14, font: boldFont, color: rgb(0, 0, 0) });
+  yPosition -= lineHeight;
+  if (reportData.keyDiscussionPoints && Array.isArray(reportData.keyDiscussionPoints) && reportData.keyDiscussionPoints.length > 0) {
+    console.log('Adding discussion points:', reportData.keyDiscussionPoints.length);
     reportData.keyDiscussionPoints.forEach((point: any, index: number) => {
       checkAndAddPage(80);
-      page.drawText(`${index + 1}. ${point.topic}`, { x: leftMargin + 10, y: yPosition, size: 12, font: boldFont, color: rgb(0, 0, 0) });
+      const topicText = point.topic || 'Untitled';
+      page.drawText(`${index + 1}. ${topicText}`, { x: leftMargin + 10, y: yPosition, size: 12, font: boldFont, color: rgb(0, 0, 0) });
       yPosition -= lineHeight;
-      if (point.description) {
+      if (point.description && point.description.trim()) {
         const descLines = wrapText(point.description, pageWidth - leftMargin - 70, 11, font);
         for (const line of descLines) {
           checkAndAddPage(lineHeight);
@@ -424,81 +438,112 @@ export async function generateReportPDF(meeting: any, reportData: any): Promise<
       }
       yPosition -= 5;
     });
-    yPosition -= 10;
+  } else {
+    console.log('No discussion points provided');
+    page.drawText('(No discussion points provided)', { x: leftMargin + 10, y: yPosition, size: 12, font: font, color: rgb(0.5, 0.5, 0.5) });
+    yPosition -= lineHeight;
   }
+  yPosition -= 10;
 
   // Decisions Taken
-  if (reportData.decisionsTaken && reportData.decisionsTaken.length > 0) {
-    checkAndAddPage(60);
-    page.drawText('4. Decisions Taken', { x: leftMargin, y: yPosition, size: 14, font: boldFont, color: rgb(0, 0, 0) });
-    yPosition -= lineHeight;
+  checkAndAddPage(60);
+  page.drawText('4. Decisions Taken', { x: leftMargin, y: yPosition, size: 14, font: boldFont, color: rgb(0, 0, 0) });
+  yPosition -= lineHeight;
+  if (reportData.decisionsTaken && Array.isArray(reportData.decisionsTaken) && reportData.decisionsTaken.length > 0) {
+    console.log('Adding decisions:', reportData.decisionsTaken.length);
     reportData.decisionsTaken.forEach((decision: string, index: number) => {
-      checkAndAddPage(lineHeight);
-      const decisionLines = wrapText(`${index + 1}. ${decision}`, pageWidth - leftMargin - 60, 12, font);
-      for (const line of decisionLines) {
+      if (decision && decision.trim()) {
         checkAndAddPage(lineHeight);
-        page.drawText(line, { x: leftMargin + 10, y: yPosition, size: 12, font: font, color: rgb(0, 0, 0) });
-        yPosition -= lineHeight;
+        const decisionLines = wrapText(`${index + 1}. ${decision}`, pageWidth - leftMargin - 60, 12, font);
+        for (const line of decisionLines) {
+          checkAndAddPage(lineHeight);
+          page.drawText(line, { x: leftMargin + 10, y: yPosition, size: 12, font: font, color: rgb(0, 0, 0) });
+          yPosition -= lineHeight;
+        }
       }
     });
-    yPosition -= 10;
+  } else {
+    console.log('No decisions provided');
+    page.drawText('(No decisions provided)', { x: leftMargin + 10, y: yPosition, size: 12, font: font, color: rgb(0.5, 0.5, 0.5) });
+    yPosition -= lineHeight;
   }
+  yPosition -= 10;
 
   // Action Items
-  if (reportData.actionItems && reportData.actionItems.length > 0) {
-    checkAndAddPage(60);
-    page.drawText('5. Action Items', { x: leftMargin, y: yPosition, size: 14, font: boldFont, color: rgb(0, 0, 0) });
-    yPosition -= lineHeight;
+  checkAndAddPage(60);
+  page.drawText('5. Action Items', { x: leftMargin, y: yPosition, size: 14, font: boldFont, color: rgb(0, 0, 0) });
+  yPosition -= lineHeight;
+  if (reportData.actionItems && Array.isArray(reportData.actionItems) && reportData.actionItems.length > 0) {
+    console.log('Adding action items:', reportData.actionItems.length);
     reportData.actionItems.forEach((item: any, index: number) => {
-      checkAndAddPage(lineHeight * 2);
-      const itemLines = wrapText(`${index + 1}. ${item.task}`, pageWidth - leftMargin - 60, 12, font);
-      for (const line of itemLines) {
-        checkAndAddPage(lineHeight);
-        page.drawText(line, { x: leftMargin + 10, y: yPosition, size: 12, font: font, color: rgb(0, 0, 0) });
-        yPosition -= lineHeight;
-      }
-      if (item.assignedTo || item.dueDate) {
-        checkAndAddPage(lineHeight);
-        const details = [];
-        if (item.assignedTo) details.push(`Assigned to: ${item.assignedTo}`);
-        if (item.dueDate) details.push(`Due: ${new Date(item.dueDate).toLocaleDateString()}`);
-        page.drawText(details.join(' | '), { x: leftMargin + 20, y: yPosition, size: 10, font: font, color: rgb(0.4, 0.4, 0.4) });
-        yPosition -= lineHeight;
+      if (item && item.task && item.task.trim()) {
+        checkAndAddPage(lineHeight * 2);
+        const itemLines = wrapText(`${index + 1}. ${item.task}`, pageWidth - leftMargin - 60, 12, font);
+        for (const line of itemLines) {
+          checkAndAddPage(lineHeight);
+          page.drawText(line, { x: leftMargin + 10, y: yPosition, size: 12, font: font, color: rgb(0, 0, 0) });
+          yPosition -= lineHeight;
+        }
+        if (item.assignedTo || item.dueDate) {
+          checkAndAddPage(lineHeight);
+          const details = [];
+          if (item.assignedTo) details.push(`Assigned to: ${item.assignedTo}`);
+          if (item.dueDate) details.push(`Due: ${new Date(item.dueDate).toLocaleDateString()}`);
+          page.drawText(details.join(' | '), { x: leftMargin + 20, y: yPosition, size: 10, font: font, color: rgb(0.4, 0.4, 0.4) });
+          yPosition -= lineHeight;
+        }
       }
     });
-    yPosition -= 10;
+  } else {
+    console.log('No action items provided');
+    page.drawText('(No action items provided)', { x: leftMargin + 10, y: yPosition, size: 12, font: font, color: rgb(0.5, 0.5, 0.5) });
+    yPosition -= lineHeight;
   }
+  yPosition -= 10;
 
   // Risks Identified
-  if (reportData.risksIdentified && reportData.risksIdentified.length > 0) {
-    checkAndAddPage(60);
-    page.drawText('6. Risks Identified', { x: leftMargin, y: yPosition, size: 14, font: boldFont, color: rgb(0, 0, 0) });
-    yPosition -= lineHeight;
+  checkAndAddPage(60);
+  page.drawText('6. Risks Identified', { x: leftMargin, y: yPosition, size: 14, font: boldFont, color: rgb(0, 0, 0) });
+  yPosition -= lineHeight;
+  if (reportData.risksIdentified && Array.isArray(reportData.risksIdentified) && reportData.risksIdentified.length > 0) {
+    console.log('Adding risks:', reportData.risksIdentified.length);
     reportData.risksIdentified.forEach((risk: string, index: number) => {
-      checkAndAddPage(lineHeight);
-      const riskLines = wrapText(`${index + 1}. ${risk}`, pageWidth - leftMargin - 60, 12, font);
-      for (const line of riskLines) {
+      if (risk && risk.trim()) {
         checkAndAddPage(lineHeight);
-        page.drawText(line, { x: leftMargin + 10, y: yPosition, size: 12, font: font, color: rgb(0, 0, 0) });
-        yPosition -= lineHeight;
+        const riskLines = wrapText(`${index + 1}. ${risk}`, pageWidth - leftMargin - 60, 12, font);
+        for (const line of riskLines) {
+          checkAndAddPage(lineHeight);
+          page.drawText(line, { x: leftMargin + 10, y: yPosition, size: 12, font: font, color: rgb(0, 0, 0) });
+          yPosition -= lineHeight;
+        }
       }
     });
-    yPosition -= 10;
+  } else {
+    console.log('No risks provided');
+    page.drawText('(No risks provided)', { x: leftMargin + 10, y: yPosition, size: 12, font: font, color: rgb(0.5, 0.5, 0.5) });
+    yPosition -= lineHeight;
   }
+  yPosition -= 10;
 
   // Conclusion
-  if (reportData.conclusion) {
-    checkAndAddPage(60);
-    page.drawText('7. Conclusion', { x: leftMargin, y: yPosition, size: 14, font: boldFont, color: rgb(0, 0, 0) });
-    yPosition -= lineHeight;
+  checkAndAddPage(60);
+  page.drawText('7. Conclusion', { x: leftMargin, y: yPosition, size: 14, font: boldFont, color: rgb(0, 0, 0) });
+  yPosition -= lineHeight;
+  if (reportData.conclusion && reportData.conclusion.trim()) {
+    console.log('Adding conclusion:', reportData.conclusion);
     const conclusionLines = wrapText(reportData.conclusion, pageWidth - leftMargin - 50, 12, font);
     for (const line of conclusionLines) {
       checkAndAddPage(lineHeight);
       page.drawText(line, { x: leftMargin + 10, y: yPosition, size: 12, font: font, color: rgb(0, 0, 0) });
       yPosition -= lineHeight;
     }
+  } else {
+    console.log('No conclusion provided');
+    page.drawText('(No conclusion provided)', { x: leftMargin + 10, y: yPosition, size: 12, font: font, color: rgb(0.5, 0.5, 0.5) });
+    yPosition -= lineHeight;
   }
 
   const pdfBytes = await pdfDoc.save();
+  console.log('PDF generated successfully, size:', pdfBytes.length);
   return Buffer.from(pdfBytes);
 }

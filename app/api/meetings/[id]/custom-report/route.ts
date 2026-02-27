@@ -17,6 +17,8 @@ export async function POST(
 
     const { id } = await params;
     const reportData = await req.json();
+    
+    console.log('Received report data:', JSON.stringify(reportData, null, 2));
 
     const meeting = await prisma.meeting.findUnique({
       where: { id },
@@ -29,6 +31,7 @@ export async function POST(
       return NextResponse.json({ error: 'Meeting not found' }, { status: 404 });
     }
 
+    console.log('Generating PDF for meeting:', meeting.title);
     const pdf = await generateReportPDF(meeting, reportData);
 
     // Create report record in database
