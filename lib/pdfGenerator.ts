@@ -300,3 +300,161 @@ export async function generatePDFFromHTML(htmlContent: string, title: string): P
   const pdfBytes = await pdfDoc.save();
   return Buffer.from(pdfBytes);
 }
+
+export async function generateReportPDF(meeting: any, reportData: any): Promise<Buffer> {
+  const pdfDoc = await PDFDocument.create();
+  let page = pdfDoc.addPage([595, 842]);
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  let yPosition = 750;
+  const leftMargin = 50;
+  const pageWidth = 595;
+  const lineHeight = 20;
+  
+  const checkAndAddPage = (requiredSpace: number) => {
+    if (yPosition - requiredSpace < 50) {
+      page = pdfDoc.addPage([595, 842]);
+      yPosition = 750;
+      return true;
+    }
+    return false;
+  };
+
+  // Title
+  page.drawText('Meeting Report', { x: leftMargin, y: yPosition, size: 24, font: boldFont, color: rgb(0, 0, 0) });
+  yPosition -= 40;
+  
+  // Meeting Title
+  page.drawText(meeting.title || 'Untitled Meeting', { x: leftMargin, y: yPosition, size: 16, font: boldFont, color: rgb(0.2, 0.2, 0.2) });
+  yPosition -= 25;
+  
+  // Meeting Date
+  const dateStr = meeting.date ? new Date(meeting.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A';
+  page.drawText(`Date: ${dateStr}`, { x: leftMargin, y: yPosition, size: 11, font: font, color: rgb(0.4, 0.4, 0.4) });
+  yPosition -= 30;
+
+  // Executive Summary
+  if (reportData.executiveSummary) {
+    checkAndAddPage(60);
+    page.drawText('1. Executive Summary', { x: leftMargin, y: yPosition, size: 14, font: boldFont, color: rgb(0, 0, 0) });
+    yPosition -= lineHeight;
+    const summaryLines = wrapText(reportData.executiveSummary, pageWidth - leftMargin - 50, 12, font);
+    for (const line of summaryLines) {
+      checkAndAddPage(lineHeight);
+      page.drawText(line, { x: leftMargin + 10, y: yPosition, size: 12, font: font, color: rgb(0, 0, 0) });
+      yPosition -= lineHeight;
+    }
+    yPosition -= 10;
+  }
+
+  // Objectives
+  if (reportData.objectives) {
+    checkAndAddPage(60);
+    page.drawText('2. Meeting Objectives', { x: leftMargin, y: yPosition, size: 14, font: boldFont, color: rgb(0, 0, 0) });
+    yPosition -= lineHeight;
+    const objectiveLines = wrapText(reportData.objectives, pageWidth - leftMargin - 50, 12, font);
+    for (const line of objectiveLines) {
+      checkAndAddPage(lineHeight);
+      page.drawText(line, { x: leftMargin + 10, y: yPosition, size: 12, font: font, color: rgb(0, 0, 0) });
+      yPosition -= lineHeight;
+    }
+    yPosition -= 10;
+  }
+
+  // Key Discussion Points
+  if (reportData.keyDiscussionPoints && reportData.keyDiscussionPoints.length > 0) {
+    checkAndAddPage(60);
+    page.drawText('3. Key Discussion Points', { x: leftMargin, y: yPosition, size: 14, font: boldFont, color: rgb(0, 0, 0) });
+    yPosition -= lineHeight;
+    reportData.keyDiscussionPoints.forEach((point: any, index: number) => {
+      checkAndAddPage(80);
+      page.drawText(`${index + 1}. ${point.topic}`, { x: leftMargin + 10, y: yPosition, size: 12, font: boldFont, color: rgb(0, 0, 0) });
+      yPosition -= lineHeight;
+      if (point.description) {
+        const descLines = wrapText(point.description, pageWidth - leftMargin - 70, 11, font);
+        for (const line of descLines) {
+          checkAndAddPage(lineHeight);
+          page.drawText(line, { x: leftMargin + 20, y: yPosition, size: 11, font: font, color: rgb(0.2, 0.2, 0.2) });
+          yPosition -= lineHeight;
+        }
+      }
+      yPosition -= 5;
+    });
+    yPosition -= 10;
+  }
+
+  // Decisions Taken
+  if (reportData.decisionsTaken && reportData.decisionsTaken.length > 0) {
+    checkAndAddPage(60);
+    page.drawText('4. Decisions Taken', { x: leftMargin, y: yPosition, size: 14, font: boldFont, color: rgb(0, 0, 0) });
+    yPosition -= lineHeight;
+    reportData.decisionsTaken.forEach((decision: string, index: number) => {
+      checkAndAddPage(lineHeight);
+      const decisionLines = wrapText(`${index + 1}. ${decision}`, pageWidth - leftMargin - 60, 12, font);
+      for (const line of decisionLines) {
+        checkAndAddPage(lineHeight);
+        page.drawText(line, { x: leftMargin + 10, y: yPosition, size: 12, font: font, color: rgb(0, 0, 0) });
+        yPosition -= lineHeight;
+      }
+    });
+    yPosition -= 10;
+  }
+
+  // Action Items
+  if (reportData.actionItems && reportData.actionItems.length > 0) {
+    checkAndAddPage(60);
+    page.drawText('5. Action Items', { x: leftMargin, y: yPosition, size: 14, font: boldFont, color: rgb(0, 0, 0) });
+    yPosition -= lineHeight;
+    reportData.actionItems.forEach((item: any, index: number) => {
+      checkAndAddPage(lineHeight * 2);
+      const itemLines = wrapText(`${index + 1}. ${item.task}`, pageWidth - leftMargin - 60, 12, font);
+      for (const line of itemLines) {
+        checkAndAddPage(lineHeight);
+        page.drawText(line, { x: leftMargin + 10, y: yPosition, size: 12, font: font, color: rgb(0, 0, 0) });
+        yPosition -= lineHeight;
+      }
+      if (item.assignedTo || item.dueDate) {
+        checkAndAddPage(lineHeight);
+        const details = [];
+        if (item.assignedTo) details.push(`Assigned to: ${item.assignedTo}`);
+        if (item.dueDate) details.push(`Due: ${new Date(item.dueDate).toLocaleDateString()}`);
+        page.drawText(details.join(' | '), { x: leftMargin + 20, y: yPosition, size: 10, font: font, color: rgb(0.4, 0.4, 0.4) });
+        yPosition -= lineHeight;
+      }
+    });
+    yPosition -= 10;
+  }
+
+  // Risks Identified
+  if (reportData.risksIdentified && reportData.risksIdentified.length > 0) {
+    checkAndAddPage(60);
+    page.drawText('6. Risks Identified', { x: leftMargin, y: yPosition, size: 14, font: boldFont, color: rgb(0, 0, 0) });
+    yPosition -= lineHeight;
+    reportData.risksIdentified.forEach((risk: string, index: number) => {
+      checkAndAddPage(lineHeight);
+      const riskLines = wrapText(`${index + 1}. ${risk}`, pageWidth - leftMargin - 60, 12, font);
+      for (const line of riskLines) {
+        checkAndAddPage(lineHeight);
+        page.drawText(line, { x: leftMargin + 10, y: yPosition, size: 12, font: font, color: rgb(0, 0, 0) });
+        yPosition -= lineHeight;
+      }
+    });
+    yPosition -= 10;
+  }
+
+  // Conclusion
+  if (reportData.conclusion) {
+    checkAndAddPage(60);
+    page.drawText('7. Conclusion', { x: leftMargin, y: yPosition, size: 14, font: boldFont, color: rgb(0, 0, 0) });
+    yPosition -= lineHeight;
+    const conclusionLines = wrapText(reportData.conclusion, pageWidth - leftMargin - 50, 12, font);
+    for (const line of conclusionLines) {
+      checkAndAddPage(lineHeight);
+      page.drawText(line, { x: leftMargin + 10, y: yPosition, size: 12, font: font, color: rgb(0, 0, 0) });
+      yPosition -= lineHeight;
+    }
+  }
+
+  const pdfBytes = await pdfDoc.save();
+  return Buffer.from(pdfBytes);
+}

@@ -226,8 +226,24 @@ export default function ReportsPage({ params }: { params: Promise<{ id: string }
   const handleSendEmail = async () => {
     setDownloadingPdf(true);
     try {
+      // Prepare report data
+      const reportDataToSend = {
+        executiveSummary,
+        objectives,
+        keyDiscussionPoints,
+        decisionsTaken,
+        actionItems,
+        risksIdentified,
+        conclusion
+      };
+
       // Generate PDF first
-      const response = await fetch(`/api/meetings/${resolvedParams.id}/pdf`);
+      const response = await fetch(`/api/meetings/${resolvedParams.id}/custom-report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(reportDataToSend)
+      });
+      
       if (!response.ok) {
         throw new Error('Failed to generate PDF');
       }
