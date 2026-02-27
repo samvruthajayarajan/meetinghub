@@ -199,11 +199,11 @@ export async function generateMinutesPDF(meeting: any, minutesData: any): Promis
     }
     yPosition -= 10;
   }
-  if (parsedMinutes?.discussion) {
+  if (parsedMinutes?.discussions) {
     checkAndAddPage(60);
-    page.drawText('Discussion:', { x: leftMargin, y: yPosition, size: 14, font: boldFont, color: rgb(0, 0, 0) });
+    page.drawText('Discussions:', { x: leftMargin, y: yPosition, size: 14, font: boldFont, color: rgb(0, 0, 0) });
     yPosition -= lineHeight;
-    const discussionLines = wrapText(parsedMinutes.discussion, pageWidth - leftMargin - 50, 12, font);
+    const discussionLines = wrapText(parsedMinutes.discussions, pageWidth - leftMargin - 50, 12, font);
     for (const line of discussionLines) {
       checkAndAddPage(lineHeight);
       page.drawText(line, { x: leftMargin + 10, y: yPosition, size: 12, font: font, color: rgb(0, 0, 0) });
@@ -211,28 +211,42 @@ export async function generateMinutesPDF(meeting: any, minutesData: any): Promis
     }
     yPosition -= 10;
   }
-  if (parsedMinutes?.decisions) {
+  if (parsedMinutes?.decisions && parsedMinutes.decisions.length > 0) {
     checkAndAddPage(60);
     page.drawText('Decisions:', { x: leftMargin, y: yPosition, size: 14, font: boldFont, color: rgb(0, 0, 0) });
     yPosition -= lineHeight;
-    const decisionLines = wrapText(parsedMinutes.decisions, pageWidth - leftMargin - 50, 12, font);
-    for (const line of decisionLines) {
+    parsedMinutes.decisions.forEach((decision: string, index: number) => {
       checkAndAddPage(lineHeight);
-      page.drawText(line, { x: leftMargin + 10, y: yPosition, size: 12, font: font, color: rgb(0, 0, 0) });
-      yPosition -= lineHeight;
-    }
+      const decisionLines = wrapText(`${index + 1}. ${decision}`, pageWidth - leftMargin - 60, 12, font);
+      for (const line of decisionLines) {
+        checkAndAddPage(lineHeight);
+        page.drawText(line, { x: leftMargin + 10, y: yPosition, size: 12, font: font, color: rgb(0, 0, 0) });
+        yPosition -= lineHeight;
+      }
+    });
     yPosition -= 10;
   }
   if (parsedMinutes?.actionItems && parsedMinutes.actionItems.length > 0) {
     checkAndAddPage(60);
     page.drawText('Action Items:', { x: leftMargin, y: yPosition, size: 14, font: boldFont, color: rgb(0, 0, 0) });
     yPosition -= lineHeight;
-    parsedMinutes.actionItems.forEach((item: string, index: number) => {
-      checkAndAddPage(lineHeight);
-      const itemLines = wrapText(`${index + 1}. ${item}`, pageWidth - leftMargin - 60, 12, font);
+    parsedMinutes.actionItems.forEach((item: any, index: number) => {
+      checkAndAddPage(lineHeight * 2);
+      // Handle both string and object formats
+      const taskText = typeof item === 'string' ? item : item.task;
+      const itemLines = wrapText(`${index + 1}. ${taskText}`, pageWidth - leftMargin - 60, 12, font);
       for (const line of itemLines) {
         checkAndAddPage(lineHeight);
         page.drawText(line, { x: leftMargin + 10, y: yPosition, size: 12, font: font, color: rgb(0, 0, 0) });
+        yPosition -= lineHeight;
+      }
+      // Add assignedTo and dueDate if available
+      if (typeof item === 'object' && (item.assignedTo || item.dueDate)) {
+        checkAndAddPage(lineHeight);
+        const details = [];
+        if (item.assignedTo) details.push(`Assigned to: ${item.assignedTo}`);
+        if (item.dueDate) details.push(`Due: ${new Date(item.dueDate).toLocaleDateString()}`);
+        page.drawText(details.join(' | '), { x: leftMargin + 20, y: yPosition, size: 10, font: font, color: rgb(0.4, 0.4, 0.4) });
         yPosition -= lineHeight;
       }
     });
