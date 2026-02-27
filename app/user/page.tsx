@@ -1,3 +1,4 @@
+// User Dashboard Page
 'use client';
 
 import { useSession, signOut } from 'next-auth/react';
