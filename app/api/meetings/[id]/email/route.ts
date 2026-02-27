@@ -19,7 +19,14 @@ export async function POST(
 
   const { id } = await params;
   const body = await req.json();
-  const { recipients } = body;
+  let { recipients } = body;
+
+  // Ensure recipients is an array
+  if (typeof recipients === 'string') {
+    recipients = recipients.split(',').map((email: string) => email.trim()).filter((email: string) => email);
+  } else if (!Array.isArray(recipients)) {
+    return NextResponse.json({ error: 'Recipients must be an array or comma-separated string' }, { status: 400 });
+  }
 
   const meeting = await prisma.meeting.findUnique({
     where: { id },
