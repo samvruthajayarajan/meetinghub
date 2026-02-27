@@ -49,33 +49,63 @@ export default function AgendaPage() {
     router.push(`/meetings/${meetingId}/agenda`);
   };
 
-  const handleShareEmail = (meetingId: string) => {
+  const handleShareEmail = async (meetingId: string) => {
     const meeting = meetings.find(m => m.id === meetingId);
     if (!meeting) return;
 
-    // Parse agenda data
-    let agendaContent = '';
+    setGenerating(true);
     try {
-      const parsed = JSON.parse(meeting.description || '{}');
-      if (parsed.savedAgendas && parsed.savedAgendas.length > 0) {
-        const agenda = parsed.savedAgendas[parsed.savedAgendas.length - 1];
-        agendaContent = `Meeting: ${meeting.title}\n\n`;
-        if (agenda.objectives) agendaContent += `Objectives:\n${agenda.objectives}\n\n`;
-        if (agenda.agendaItems && agenda.agendaItems.length > 0) {
-          agendaContent += 'Agenda Items:\n';
-          agenda.agendaItems.forEach((item: any, idx: number) => {
-            agendaContent += `${idx + 1}. ${item.topic}\n`;
-            if (item.description) agendaContent += `   ${item.description}\n`;
-          });
-        }
+      // Generate PDF first
+      const response = await fetch(`/api/meetings/${meetingId}/agenda-pdf`);
+      if (!response.ok) {
+        throw new Error('Failed to generate PDF');
       }
-    } catch (e) {
-      agendaContent = `Meeting: ${meeting.title}\nDate: ${new Date(meeting.date).toLocaleString()}`;
-    }
+      
+      const blob = await response.blob();
+      const pdfUrl = window.URL.createObjectURL(blob);
+      
+      // Auto-download the PDF
+      const a = document.createElement('a');
+      a.href = pdfUrl;
+      a.download = `agenda-${meeting.title.replace(/[^a-zA-Z0-9-_]/g, '-')}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      
+      // Parse agenda data for email body
+      let agendaContent = '';
+      try {
+        const parsed = JSON.parse(meeting.description || '{}');
+        if (parsed.savedAgendas && parsed.savedAgendas.length > 0) {
+          const agenda = parsed.savedAgendas[parsed.savedAgendas.length - 1];
+          agendaContent = `Meeting: ${meeting.title}\n\n`;
+          if (agenda.objectives) agendaContent += `Objectives:\n${agenda.objectives}\n\n`;
+          if (agenda.agendaItems && agenda.agendaItems.length > 0) {
+            agendaContent += 'Agenda Items:\n';
+            agenda.agendaItems.forEach((item: any, idx: number) => {
+              agendaContent += `${idx + 1}. ${item.topic}\n`;
+              if (item.description) agendaContent += `   ${item.description}\n`;
+            });
+          }
+        }
+      } catch (e) {
+        agendaContent = `Meeting: ${meeting.title}\nDate: ${new Date(meeting.date).toLocaleString()}`;
+      }
 
-    const subject = `Meeting Agenda: ${meeting.title}`;
-    const body = encodeURIComponent(agendaContent);
-    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${body}`;
+      agendaContent += `\n\nNote: The agenda PDF has been downloaded to your computer. Please attach it to this email before sending.`;
+
+      const subject = `Meeting Agenda: ${meeting.title}`;
+      const body = encodeURIComponent(agendaContent);
+      window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${body}`;
+      
+      // Clean up
+      setTimeout(() => window.URL.revokeObjectURL(pdfUrl), 100);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Failed to generate PDF. Please try again.');
+    } finally {
+      setGenerating(false);
+    }
   };
 
   const handleShareWhatsApp = (meetingId: string) => {
@@ -251,7 +281,8 @@ export default function AgendaPage() {
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleShareEmail(meeting.id)}
-                          className="flex-1 px-4 py-2 bg-purple-100 text-purple-700 rounded-xl hover:bg-purple-200 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                          disabled={generating}
+                          className="flex-1 px-4 py-2 bg-purple-100 text-purple-700 rounded-xl hover:bg-purple-200 transition-colors text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-50"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />

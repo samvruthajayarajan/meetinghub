@@ -11,6 +11,7 @@ export default function ReportsPage({ params }: { params: Promise<{ id: string }
   const [loading, setLoading] = useState(true);
   const [meeting, setMeeting] = useState<any>(null);
   const [generating, setGenerating] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [pdfUrl, setPdfUrl] = useState('');
   const [expandedReportId, setExpandedReportId] = useState<string | null>(null);
   const [showReportForm, setShowReportForm] = useState(false);
@@ -222,50 +223,80 @@ export default function ReportsPage({ params }: { params: Promise<{ id: string }
     setRisksIdentified(risksIdentified.filter((_, i) => i !== index));
   };
 
-  const handleSendEmail = () => {
-    // Prepare report content
-    let reportContent = `Meeting Report: ${meeting?.title}\n\n`;
-    
-    if (executiveSummary) reportContent += `Executive Summary:\n${executiveSummary}\n\n`;
-    if (objectives) reportContent += `Objectives:\n${objectives}\n\n`;
-    
-    if (keyDiscussionPoints && keyDiscussionPoints.length > 0) {
-      reportContent += `Key Discussion Points:\n`;
-      keyDiscussionPoints.forEach((point, idx) => {
-        reportContent += `${idx + 1}. ${point.topic}\n   ${point.description}\n`;
-      });
-      reportContent += '\n';
-    }
-    
-    if (decisionsTaken && decisionsTaken.length > 0) {
-      reportContent += `Decisions Taken:\n`;
-      decisionsTaken.forEach((decision, idx) => {
-        reportContent += `${idx + 1}. ${decision}\n`;
-      });
-      reportContent += '\n';
-    }
-    
-    if (actionItems && actionItems.length > 0) {
-      reportContent += `Action Items:\n`;
-      actionItems.forEach((item, idx) => {
-        reportContent += `${idx + 1}. ${item.task} - Assigned to: ${item.assignedTo} - Due: ${new Date(item.dueDate).toLocaleDateString()}\n`;
-      });
-      reportContent += '\n';
-    }
-    
-    if (risksIdentified && risksIdentified.length > 0) {
-      reportContent += `Risks Identified:\n`;
-      risksIdentified.forEach((risk, idx) => {
-        reportContent += `${idx + 1}. ${risk}\n`;
-      });
-      reportContent += '\n';
-    }
-    
-    if (conclusion) reportContent += `Conclusion:\n${conclusion}`;
+  const handleSendEmail = async () => {
+    setDownloadingPdf(true);
+    try {
+      // Generate PDF first
+      const response = await fetch(`/api/meetings/${resolvedParams.id}/pdf`);
+      if (!response.ok) {
+        throw new Error('Failed to generate PDF');
+      }
+      
+      const blob = await response.blob();
+      const pdfUrl = window.URL.createObjectURL(blob);
+      
+      // Auto-download the PDF
+      const a = document.createElement('a');
+      a.href = pdfUrl;
+      a.download = `report-${meeting?.title.replace(/[^a-zA-Z0-9-_]/g, '-')}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
 
-    const subject = `Meeting Report: ${meeting?.title}`;
-    const body = encodeURIComponent(reportContent);
-    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${body}`;
+      // Prepare report content
+      let reportContent = `Meeting Report: ${meeting?.title}\n\n`;
+      
+      if (executiveSummary) reportContent += `Executive Summary:\n${executiveSummary}\n\n`;
+      if (objectives) reportContent += `Objectives:\n${objectives}\n\n`;
+      
+      if (keyDiscussionPoints && keyDiscussionPoints.length > 0) {
+        reportContent += `Key Discussion Points:\n`;
+        keyDiscussionPoints.forEach((point, idx) => {
+          reportContent += `${idx + 1}. ${point.topic}\n   ${point.description}\n`;
+        });
+        reportContent += '\n';
+      }
+      
+      if (decisionsTaken && decisionsTaken.length > 0) {
+        reportContent += `Decisions Taken:\n`;
+        decisionsTaken.forEach((decision, idx) => {
+          reportContent += `${idx + 1}. ${decision}\n`;
+        });
+        reportContent += '\n';
+      }
+      
+      if (actionItems && actionItems.length > 0) {
+        reportContent += `Action Items:\n`;
+        actionItems.forEach((item, idx) => {
+          reportContent += `${idx + 1}. ${item.task} - Assigned to: ${item.assignedTo} - Due: ${new Date(item.dueDate).toLocaleDateString()}\n`;
+        });
+        reportContent += '\n';
+      }
+      
+      if (risksIdentified && risksIdentified.length > 0) {
+        reportContent += `Risks Identified:\n`;
+        risksIdentified.forEach((risk, idx) => {
+          reportContent += `${idx + 1}. ${risk}\n`;
+        });
+        reportContent += '\n';
+      }
+      
+      if (conclusion) reportContent += `Conclusion:\n${conclusion}`;
+
+      reportContent += `\n\nNote: The report PDF has been downloaded to your computer. Please attach it to this email before sending.`;
+
+      const subject = `Meeting Report: ${meeting?.title}`;
+      const body = encodeURIComponent(reportContent);
+      window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${body}`;
+      
+      // Clean up
+      setTimeout(() => window.URL.revokeObjectURL(pdfUrl), 100);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Failed to generate PDF. Please try again.');
+    } finally {
+      setDownloadingPdf(false);
+    }
   };
 
   const handleSendWhatsApp = () => {
@@ -659,7 +690,8 @@ export default function ReportsPage({ params }: { params: Promise<{ id: string }
             {/* Email Button */}
             <button
               onClick={handleSendEmail}
-              className="p-6 bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-green-300 rounded-xl transition-all group shadow-sm"
+              disabled={downloadingPdf}
+              className="p-6 bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-green-300 rounded-xl transition-all group shadow-sm disabled:opacity-50"
             >
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">

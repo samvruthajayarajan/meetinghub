@@ -49,6 +49,7 @@ export default function MinutesPage({ params }: { params: Promise<{ id: string }
     dueDate: '',
   });
   const [generating, setGenerating] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -263,40 +264,70 @@ export default function MinutesPage({ params }: { params: Promise<{ id: string }
     }
   };
 
-  const handleSendEmail = () => {
+  const handleSendEmail = async () => {
     if (!minutesData.discussions.trim()) {
       alert('Please add discussions before sharing minutes');
       return;
     }
 
-    let minutesContent = `Meeting Minutes: ${meeting?.title}\n\n`;
-    
-    if (minutesData.attendees && minutesData.attendees.length > 0) {
-      minutesContent += `Attendees: ${minutesData.attendees.join(', ')}\n\n`;
-    }
-    
-    if (minutesData.discussions) {
-      minutesContent += `Discussions:\n${minutesData.discussions}\n\n`;
-    }
-    
-    if (minutesData.decisions && minutesData.decisions.length > 0) {
-      minutesContent += `Decisions Made:\n`;
-      minutesData.decisions.forEach((decision, idx) => {
-        minutesContent += `${idx + 1}. ${decision}\n`;
-      });
-      minutesContent += '\n';
-    }
-    
-    if (minutesData.actionItems && minutesData.actionItems.length > 0) {
-      minutesContent += `Action Items:\n`;
-      minutesData.actionItems.forEach((item, idx) => {
-        minutesContent += `${idx + 1}. ${item.task} - Assigned to: ${item.assignedTo} - Due: ${new Date(item.dueDate).toLocaleDateString()}\n`;
-      });
-    }
+    setDownloadingPdf(true);
+    try {
+      // Generate PDF first
+      const response = await fetch(`/api/meetings/${resolvedParams.id}/pdf`);
+      if (!response.ok) {
+        throw new Error('Failed to generate PDF');
+      }
+      
+      const blob = await response.blob();
+      const pdfUrl = window.URL.createObjectURL(blob);
+      
+      // Auto-download the PDF
+      const a = document.createElement('a');
+      a.href = pdfUrl;
+      a.download = `minutes-${meeting?.title.replace(/[^a-zA-Z0-9-_]/g, '-')}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
 
-    const subject = `Meeting Minutes: ${meeting?.title}`;
-    const body = encodeURIComponent(minutesContent);
-    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${body}`;
+      let minutesContent = `Meeting Minutes: ${meeting?.title}\n\n`;
+      
+      if (minutesData.attendees && minutesData.attendees.length > 0) {
+        minutesContent += `Attendees: ${minutesData.attendees.join(', ')}\n\n`;
+      }
+      
+      if (minutesData.discussions) {
+        minutesContent += `Discussions:\n${minutesData.discussions}\n\n`;
+      }
+      
+      if (minutesData.decisions && minutesData.decisions.length > 0) {
+        minutesContent += `Decisions Made:\n`;
+        minutesData.decisions.forEach((decision, idx) => {
+          minutesContent += `${idx + 1}. ${decision}\n`;
+        });
+        minutesContent += '\n';
+      }
+      
+      if (minutesData.actionItems && minutesData.actionItems.length > 0) {
+        minutesContent += `Action Items:\n`;
+        minutesData.actionItems.forEach((item, idx) => {
+          minutesContent += `${idx + 1}. ${item.task} - Assigned to: ${item.assignedTo} - Due: ${new Date(item.dueDate).toLocaleDateString()}\n`;
+        });
+      }
+
+      minutesContent += `\n\nNote: The minutes PDF has been downloaded to your computer. Please attach it to this email before sending.`;
+
+      const subject = `Meeting Minutes: ${meeting?.title}`;
+      const body = encodeURIComponent(minutesContent);
+      window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${body}`;
+      
+      // Clean up
+      setTimeout(() => window.URL.revokeObjectURL(pdfUrl), 100);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Failed to generate PDF. Please try again.');
+    } finally {
+      setDownloadingPdf(false);
+    }
   };
 
   const handleSendWhatsApp = () => {
@@ -638,7 +669,8 @@ export default function MinutesPage({ params }: { params: Promise<{ id: string }
             {/* Email Button */}
             <button
               onClick={handleSendEmail}
-              className="p-6 bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-green-300 rounded-xl transition-all group shadow-sm"
+              disabled={downloadingPdf}
+              className="p-6 bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-green-300 rounded-xl transition-all group shadow-sm disabled:opacity-50"
             >
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">

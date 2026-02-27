@@ -26,6 +26,7 @@ export default function ViewMinutesPage({ params }: { params: Promise<{ id: stri
   const [meeting, setMeeting] = useState<any>(null);
   const [savedMinutes, setSavedMinutes] = useState<SavedMinutes[]>([]);
   const [viewingMinutesId, setViewingMinutesId] = useState<string | null>(null);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -63,41 +64,71 @@ export default function ViewMinutesPage({ params }: { params: Promise<{ id: stri
     }
   };
 
-  const handleSendEmail = () => {
+  const handleSendEmail = async () => {
     if (savedMinutes.length === 0) {
       alert('No minutes available to share');
       return;
     }
 
-    const latestMinutes = savedMinutes[savedMinutes.length - 1];
-    let minutesContent = `*Meeting Minutes: ${meeting?.title}*\n\n`;
-    
-    if (latestMinutes.attendees && latestMinutes.attendees.length > 0) {
-      minutesContent += `Attendees: ${latestMinutes.attendees.join(', ')}\n\n`;
-    }
-    
-    if (latestMinutes.discussions) {
-      minutesContent += `Discussions:\n${latestMinutes.discussions}\n\n`;
-    }
-    
-    if (latestMinutes.decisions && latestMinutes.decisions.length > 0) {
-      minutesContent += `Decisions Made:\n`;
-      latestMinutes.decisions.forEach((decision, idx) => {
-        minutesContent += `${idx + 1}. ${decision}\n`;
-      });
-      minutesContent += '\n';
-    }
-    
-    if (latestMinutes.actionItems && latestMinutes.actionItems.length > 0) {
-      minutesContent += `Action Items:\n`;
-      latestMinutes.actionItems.forEach((item, idx) => {
-        minutesContent += `${idx + 1}. ${item.task} - Assigned to: ${item.assignedTo} - Due: ${new Date(item.dueDate).toLocaleDateString()}\n`;
-      });
-    }
+    setDownloadingPdf(true);
+    try {
+      // Generate PDF first
+      const response = await fetch(`/api/meetings/${resolvedParams.id}/pdf`);
+      if (!response.ok) {
+        throw new Error('Failed to generate PDF');
+      }
+      
+      const blob = await response.blob();
+      const pdfUrl = window.URL.createObjectURL(blob);
+      
+      // Auto-download the PDF
+      const a = document.createElement('a');
+      a.href = pdfUrl;
+      a.download = `minutes-${meeting?.title.replace(/[^a-zA-Z0-9-_]/g, '-')}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
 
-    const subject = `Meeting Minutes: ${meeting?.title}`;
-    const body = encodeURIComponent(minutesContent);
-    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${body}`;
+      const latestMinutes = savedMinutes[savedMinutes.length - 1];
+      let minutesContent = `Meeting Minutes: ${meeting?.title}\n\n`;
+      
+      if (latestMinutes.attendees && latestMinutes.attendees.length > 0) {
+        minutesContent += `Attendees: ${latestMinutes.attendees.join(', ')}\n\n`;
+      }
+      
+      if (latestMinutes.discussions) {
+        minutesContent += `Discussions:\n${latestMinutes.discussions}\n\n`;
+      }
+      
+      if (latestMinutes.decisions && latestMinutes.decisions.length > 0) {
+        minutesContent += `Decisions Made:\n`;
+        latestMinutes.decisions.forEach((decision, idx) => {
+          minutesContent += `${idx + 1}. ${decision}\n`;
+        });
+        minutesContent += '\n';
+      }
+      
+      if (latestMinutes.actionItems && latestMinutes.actionItems.length > 0) {
+        minutesContent += `Action Items:\n`;
+        latestMinutes.actionItems.forEach((item, idx) => {
+          minutesContent += `${idx + 1}. ${item.task} - Assigned to: ${item.assignedTo} - Due: ${new Date(item.dueDate).toLocaleDateString()}\n`;
+        });
+      }
+
+      minutesContent += `\n\nNote: The minutes PDF has been downloaded to your computer. Please attach it to this email before sending.`;
+
+      const subject = `Meeting Minutes: ${meeting?.title}`;
+      const body = encodeURIComponent(minutesContent);
+      window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${body}`;
+      
+      // Clean up
+      setTimeout(() => window.URL.revokeObjectURL(pdfUrl), 100);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Failed to generate PDF. Please try again.');
+    } finally {
+      setDownloadingPdf(false);
+    }
   };
 
   const handleSendWhatsApp = () => {
@@ -201,7 +232,8 @@ export default function ViewMinutesPage({ params }: { params: Promise<{ id: stri
               {/* Email Button */}
               <button
                 onClick={handleSendEmail}
-                className="group relative p-4 sm:p-6 bg-white hover:bg-blue-50 border-2 border-gray-200 hover:border-blue-300 rounded-xl transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
+                disabled={downloadingPdf}
+                className="group relative p-4 sm:p-6 bg-white hover:bg-blue-50 border-2 border-gray-200 hover:border-blue-300 rounded-xl transition-all duration-300 hover:shadow-lg hover:-translate-y-1 disabled:opacity-50"
               >
                 <div className="flex flex-col items-center gap-2 sm:gap-3">
                   <div className="w-12 h-12 sm:w-14 sm:h-14 bg-blue-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
